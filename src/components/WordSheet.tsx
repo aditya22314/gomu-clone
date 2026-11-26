@@ -29,13 +29,14 @@ export default function WordSheet({ word, saved, onSave, onRemove, onClose, cont
       alive = false;
     };
   }, [word]);
-  const e = local ?? (online?.word === word ? online.entry ?? undefined : undefined);
-  const loading = !!word && !local && online?.word !== word;
-  const failed = !!word && !local && online?.word === word && !online.entry;
+  const fetched = online !== null && word !== null && online.word === word ? online : null;
+  const e = local ?? fetched?.entry ?? undefined;
+  const loading = !!word && !local && !fetched;
+  const failed = !!word && !local && !!fetched && !fetched.entry;
   return (
     <Modal visible={!!word} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close word card" />
-      {(loading || failed) && word && (
+      {(loading || failed) && !!word && (
         <View style={styles.sheet}>
           <View style={styles.handle} />
           {!!hint?.reading && <Text style={styles.reading}>{hint.reading}</Text>}

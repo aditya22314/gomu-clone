@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pill, Stepper } from '../components/Choice';
+import SceneArt from '../components/SceneArt';
 import { Level, LEVELS } from '../data/dictionary';
 import { scheduleDailyReminder } from '../lib/notifications';
 import { useStore } from '../lib/store';
@@ -38,10 +39,21 @@ export default function OnboardingScreen() {
 
   const steps = [
     <View key="hello" style={styles.center}>
-      <Text style={{ fontSize: 80 }}>👂🍊</Text>
+      <View style={styles.hero}>
+        <SceneArt
+          backdrop="city-dusk"
+          talking
+          speaker="Mei"
+          cast={[
+            { name: 'Haru', hair: 'spiky', hairColor: '#2A2238', shirt: '#2E3F6E' },
+            { name: 'Mei', hair: 'ponytail', hairColor: '#5A3A2A', shirt: '#F28BA8' },
+          ]}
+        />
+        <View style={styles.heroBubble}><Text style={styles.heroBubbleText}>いっしょに 日本語を 学ぼう！</Text></View>
+      </View>
       <Text style={styles.logo}>mimi<Text style={{ color: C.accent }}>耳</Text></Text>
-      <Text style={styles.title}>Learn Japanese by listening to real-sounding scenes.</Text>
-      <Text style={styles.sub}>Swipe through short scenes, tap any word to look it up, save it, and review it right before you'd forget it. Free, no ads, no account.</Text>
+      <Text style={styles.title}>Learn Japanese from scenes and real videos.</Text>
+      <Text style={styles.sub}>50 animated scenes from N5 to N1, plus any YouTube video you add. Tap a word to see what it means, save it, and review it right before you'd forget it. Free, with no ads and no account.</Text>
     </View>,
     <View key="level">
       <Text style={styles.title}>What's your Japanese level?</Text>
@@ -111,6 +123,9 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  hero: { width: '100%', height: 260, borderRadius: 24, overflow: 'hidden', marginBottom: 8 },
+  heroBubble: { position: 'absolute', top: 16, alignSelf: 'center', backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 16 },
+  heroBubbleText: { fontWeight: '800', color: C.ink, fontSize: 15 },
   logo: { fontSize: 40, fontWeight: '900', color: C.ink },
   title: { fontSize: 24, fontWeight: '800', color: C.ink, marginBottom: 6, textAlign: 'left' },
   sub: { color: C.sub, fontSize: 15, lineHeight: 21 },

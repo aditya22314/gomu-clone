@@ -1,4 +1,5 @@
 // A small SM-2 style scheduler.
+import type { Entry } from '../data/dictionary';
 export type Grade = 'again' | 'hard' | 'good' | 'easy';
 
 export type Card = {
@@ -12,12 +13,13 @@ export type Card = {
   clipId: string;
   lineJp: string;
   lineEn: string;
+  entry?: Entry; // snapshot, so words looked up online still work offline
 };
 
 const DAY = 24 * 60 * 60 * 1000;
 
-export function newCard(word: string, clipId: string, lineJp: string, lineEn: string, now = Date.now()): Card {
-  return { word, addedAt: now, due: now, interval: 0, ease: 2.5, reps: 0, lapses: 0, clipId, lineJp, lineEn };
+export function newCard(word: string, clipId: string, lineJp: string, lineEn: string, now = Date.now(), entry?: Entry): Card {
+  return { word, addedAt: now, due: now, interval: 0, ease: 2.5, reps: 0, lapses: 0, clipId, lineJp, lineEn, entry };
 }
 
 export function schedule(card: Card, grade: Grade, now = Date.now()): Card {

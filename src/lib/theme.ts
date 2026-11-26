@@ -19,4 +19,5 @@ export const LEVEL_COLOR: Record<string, string> = {
   N3: '#8B5CF6',
   N2: '#F08C00',
   N1: '#D93838',
+  Other: '#6B7280',
 };

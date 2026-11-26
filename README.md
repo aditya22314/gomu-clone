@@ -8,7 +8,8 @@ No ads, no account, no tracking. Everything is stored on the device.
 
 ## Features
 
-- **Scene feed.** A vertical, swipeable feed of short dialogues in four styles (anime, drama, movie, podcast), from N5 to N1. Filter by your level, all levels, or style.
+- **Scene feed.** A vertical, swipeable feed of 50 short dialogues in four styles (anime, drama, movie, podcast), from N5 to N1, each with its own illustrated backdrop and animated characters whose mouths move while they speak. Filter by your level, all levels, or style.
+- **Reels.** Real Japanese YouTube videos played through YouTube's official embedded player with Japanese captions. Add any video or Short by pasting its link, look up words you hear (Jisho.org), and save them with the video as context. Curated reels with timed, tap-to-learn subtitles can be added with `scripts/import-subtitles.ts`.
 - **Japanese audio.** Each scene is read aloud line by line with the phone's built-in Japanese voice. Pause, repeat a line, go back, or switch to slow audio.
 - **Smart subtitles.** Furigana above kanji, romaji and English under each line. Each one can be turned off.
 - **Tap any word.** A word card shows the reading, romaji, meaning, part of speech, dictionary form, JLPT level and the line you heard it in, with audio and a Jisho.org link.
@@ -39,11 +40,20 @@ and give every token a dictionary entry. `npm run check` reports any word that i
 A clip can also carry an optional `youtube` field (video id, start and end, channel) for a future version that plays
 real clips through YouTube's official embedded player. Only add clips you have the right to use, and credit the channel.
 
+## Adding curated reels
+
+1. Download a video's Japanese captions as WebVTT (and English ones if available). Only use videos whose captions you may reuse, and keep the channel credit.
+2. List them in a JSON file: `[{ "videoId": "...", "title": "...", "channel": "...", "level": "N4", "subtitles": "ja.vtt", "translations": "en.vtt" }]`.
+3. Run `npx tsx scripts/import-subtitles.ts path/to/reels.json`. It splits every line into words with kuromoji and writes `src/data/reels.generated.ts`.
+
+Words in reels that aren't in the built-in dictionary are looked up on Jisho.org when tapped, and saved with the card so reviews work offline.
+
+`scripts/tokenize-scenes.ts` helps write new scenes: it splits lines into words and lists the ones that still need a dictionary entry.
+
 ## Not included yet
 
 - Accounts and cloud sync (needs a backend such as Supabase)
-- Real video clips (the data model is ready, the player is not)
-- A full dictionary with automatic word splitting for any sentence
+- A starter set of curated reels with timed subtitles
 
 ## Licence
 

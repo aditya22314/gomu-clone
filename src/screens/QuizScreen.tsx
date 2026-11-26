@@ -1,13 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ALL_ENTRIES, Entry, hasKanji, Level, LEVELS, lookup } from '../data/dictionary';
+import { ALL_ENTRIES, Entry, hasKanji, joinTokens, Level, LEVELS, lookup } from '../data/dictionary';
+import { success, warning } from '../lib/haptics';
 import { speakJapanese } from '../lib/speech';
 import { useStore } from '../lib/store';
 import { C, LEVEL_COLOR } from '../lib/theme';
 
-type QType = 'meaning' | 'reading' | 'listen';
-type Question = { entry: Entry; type: QType; choices: string[]; answer: string };
+type QType = 'meaning' | 'reading' | 'listen' | 'context';
+type Question = { entry: Entry; type: QType; choices: string[]; answer: string; sentence?: { jp: string; en: string } };
+type Context = { jp: string; en: string };
 
 const POOL = ALL_ENTRIES.filter((e) => e.pos !== 'symbol' && e.pos !== 'name');
 
@@ -20,9 +23,13 @@ function shuffle<T>(a: T[]): T[] {
   return b;
 }
 
-function buildQuestion(entry: Entry): Question {
+function buildQuestion(entry: Entry, ctx?: Context): Question {
   const types: QType[] = ['meaning', 'listen'];
   if (hasKanji(entry.surface)) types.push('reading');
+  // the sentence the word was saved from makes a fill-in-the-blank question
+  const tokens = ctx?.jp.split(' ') ?? [];
+  const canBlank = tokens.length > 1 && tokens.includes(entry.surface);
+  if (canBlank) types.push('context', 'context');
   const type = types[Math.floor(Math.random() * types.length)];
   const field = (e: Entry) => (type === 'meaning' ? e.meaning : type === 'reading' ? e.reading : e.surface);
   const answer = field(entry);
@@ -35,28 +42,52 @@ function buildQuestion(entry: Entry): Question {
     if (!distractors.includes(v)) distractors.push(v);
     if (distractors.length === 3) break;
   }
-  return { entry, type, answer, choices: shuffle([answer, ...distractors]) };
+  const sentence =
+    type === 'context' && ctx ? { jp: joinTokens(tokens.map((t) => (t === entry.surface ? '＿＿' : t)).join(' ')), en: ctx.en } : undefined;
+  return { entry, type, answer, choices: shuffle([answer, ...distractors]), sentence };
 }
 
 function QuizRun({ entries, title, onFinish }: { entries: Entry[]; title: string; onFinish: (score: number) => void }) {
   const { review, state } = useStore();
-  const questions = useMemo(() => shuffle(entries).slice(0, 10).map(buildQuestion), [entries]);
+  const questions = useMemo(
+    () =>
+      shuffle(entries)
+        .slice(0, 10)
+        .map((e) => {
+          const c = state.cards[e.surface];
+          return buildQuestion(e, c ? { jp: c.lineJp, en: c.lineEn } : undefined);
+        }),
+    [entries],
+  );
   const [i, setI] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
   const [correct, setCorrect] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [missed, setMissed] = useState<Entry[]>([]);
   const q = questions[i];
 
   if (!q) {
     const score = Math.round((correct / questions.length) * 100);
     return (
-      <View style={styles.center}>
+      <ScrollView contentContainerStyle={[styles.center, { flexGrow: 1 }]}>
         <Text style={{ fontSize: 56 }}>{score >= 80 ? '🏅' : score >= 50 ? '👍' : '💪'}</Text>
         <Text style={styles.h2}>{correct} / {questions.length} correct</Text>
         <Text style={styles.sub}>{score >= 80 ? 'Great work!' : 'Keep watching and reviewing, you will get there.'}</Text>
+        {missed.length > 0 && (
+          <View style={[styles.box, { alignSelf: 'stretch', marginTop: 12 }]}>
+            <Text style={styles.h3}>Words to go over</Text>
+            {missed.map((m) => (
+              <View key={m.surface} style={styles.missRow}>
+                <Text style={styles.missWord}>{m.surface}</Text>
+                <Text style={[styles.sub, { flex: 1 }]} numberOfLines={2}>{m.reading} · {m.meaning}</Text>
+              </View>
+            ))}
+          </View>
+        )}
         <Pressable style={styles.primary} onPress={() => onFinish(score)}>
           <Text style={styles.primaryText}>Finish</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -64,27 +95,47 @@ function QuizRun({ entries, title, onFinish }: { entries: Entry[]; title: string
     if (picked) return;
     setPicked(c);
     const ok = c === q.answer;
-    if (ok) setCorrect((x) => x + 1);
+    if (ok) {
+      success();
+      setCorrect((x) => x + 1);
+      setCombo((x) => x + 1);
+    } else {
+      warning();
+      setCombo(0);
+      setMissed((m) => [...m, q.entry]);
+    }
+    if (q.type === 'context' || q.type === 'listen') speakJapanese(q.entry.surface);
     if (state.cards[q.entry.surface]) review(q.entry.surface, ok ? 'good' : 'again');
   };
 
   const prompt =
-    q.type === 'meaning' ? 'What does this mean?' : q.type === 'reading' ? 'How do you read this?' : 'Which word did you hear?';
+    q.type === 'meaning'
+      ? 'What does this mean?'
+      : q.type === 'reading'
+        ? 'How do you read this?'
+        : q.type === 'context'
+          ? 'Which word fills the gap?'
+          : 'Which word did you hear?';
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16 }}>
       <View style={styles.rowBetween}>
         <Text style={styles.sub}>{title}</Text>
-        <Text style={styles.sub}>{i + 1} / {questions.length}</Text>
+        <Text style={styles.sub}>{combo >= 3 ? `🔥 ${combo} in a row · ` : ''}{i + 1} / {questions.length}</Text>
       </View>
       <View style={styles.progress}><View style={[styles.progressFill, { width: `${(i / questions.length) * 100}%` }]} /></View>
       <Text style={styles.prompt}>{prompt}</Text>
       <View style={styles.qCard}>
         {q.type === 'listen' ? (
-          <Pressable onPress={() => speakJapanese(q.entry.surface)} style={styles.listenBtn}>
-            <Text style={{ fontSize: 40 }}>🔊</Text>
-            <Text style={styles.sub}>Tap to play</Text>
+          <Pressable onPress={() => speakJapanese(q.entry.surface)} style={styles.listenBtn} accessibilityLabel="Play the word">
+            <View style={styles.listenCircle}><Ionicons name="volume-high" size={36} color={C.accent} /></View>
+            <Text style={[styles.sub, { marginTop: 8 }]}>Tap to play</Text>
           </Pressable>
+        ) : q.sentence ? (
+          <View style={{ alignItems: 'center', gap: 6 }}>
+            <Text style={styles.sentence}>{q.sentence.jp}</Text>
+            <Text style={[styles.sub, { textAlign: 'center' }]}>{q.sentence.en}</Text>
+          </View>
         ) : (
           <Text style={styles.qWord}>{q.entry.surface}</Text>
         )}
@@ -208,6 +259,10 @@ const styles = StyleSheet.create({
   qCard: { backgroundColor: C.card, borderRadius: 20, padding: 28, alignItems: 'center', marginVertical: 14, borderWidth: 1, borderColor: C.line },
   qWord: { fontSize: 48, fontWeight: '800', color: C.ink },
   listenBtn: { alignItems: 'center' },
+  listenCircle: { width: 76, height: 76, borderRadius: 38, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center' },
+  sentence: { fontSize: 24, fontWeight: '700', color: C.ink, textAlign: 'center', lineHeight: 34 },
+  missRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, borderTopWidth: 1, borderTopColor: C.line },
+  missWord: { fontSize: 20, fontWeight: '800', color: C.ink, minWidth: 60 },
   choice: { padding: 16, borderRadius: 14, borderWidth: 1, borderColor: C.line, marginBottom: 8 },
   choiceText: { fontSize: 16, color: C.ink, fontWeight: '600' },
   levelRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.card, padding: 14, borderRadius: 14, marginTop: 8, borderWidth: 1, borderColor: C.line },

@@ -1,20 +1,24 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WordSheet from '../components/WordSheet';
 import { CLIPS } from '../data/clips';
-import { joinTokens, lookup } from '../data/dictionary';
+import { joinTokens, Level, LEVELS, lookup } from '../data/dictionary';
+import { success, tap, warning } from '../lib/haptics';
 import { toRomaji } from '../lib/romaji';
 import { speakJapanese } from '../lib/speech';
-import { Card, describeDue, Grade, isDue } from '../lib/srs';
+import { Card, describeDue, formatGap, Grade, isDue, isMastered, schedule } from '../lib/srs';
 import { useStore } from '../lib/store';
 import { C, LEVEL_COLOR } from '../lib/theme';
 
-function ReviewSession({ queue, onExit }: { queue: string[]; onExit: () => void }) {
+function ReviewSession({ queue: initial, onExit }: { queue: string[]; onExit: () => void }) {
   const { state, review } = useStore();
+  const [queue, setQueue] = useState(initial);
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [done, setDone] = useState(0);
+  const [missed, setMissed] = useState(0);
 
   const word = queue[idx];
   const card = word ? state.cards[word] : undefined;
@@ -25,7 +29,11 @@ function ReviewSession({ queue, onExit }: { queue: string[]; onExit: () => void 
       <View style={styles.center}>
         <Text style={{ fontSize: 56 }}>🎉</Text>
         <Text style={styles.h2}>All caught up</Text>
-        <Text style={styles.sub}>You reviewed {done} word{done === 1 ? '' : 's'}. They'll come back right before you forget them.</Text>
+        <Text style={[styles.sub, { textAlign: 'center' }]}>
+          You did {done} review{done === 1 ? '' : 's'}
+          {missed > 0 ? `, and went over ${missed} tricky word${missed === 1 ? '' : 's'} again` : ''}. Each word comes back right before you'd
+          forget it.
+        </Text>
         <Pressable style={styles.primary} onPress={onExit}>
           <Text style={styles.primaryText}>Done</Text>
         </Pressable>
@@ -36,6 +44,12 @@ function ReviewSession({ queue, onExit }: { queue: string[]; onExit: () => void 
   const grade = (g: Grade) => {
     review(word, g);
     setDone((d) => d + 1);
+    if (g === 'again') {
+      // show a missed word once more at the end of this session
+      warning();
+      setMissed((m) => m + 1);
+      if (!queue.slice(idx + 1).includes(word)) setQueue((q) => [...q, word]);
+    } else tap();
     setRevealed(false);
     setIdx((i) => i + 1);
   };
@@ -45,9 +59,12 @@ function ReviewSession({ queue, onExit }: { queue: string[]; onExit: () => void 
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <View style={styles.rowBetween}>
-        <Pressable onPress={onExit}><Text style={styles.link}>✕ Close</Text></Pressable>
+        <Pressable onPress={onExit} accessibilityLabel="Close review" hitSlop={10}>
+          <Ionicons name="close" size={26} color={C.ink} />
+        </Pressable>
         <Text style={styles.sub}>{idx + 1} / {queue.length}</Text>
       </View>
+      <View style={styles.progress}><View style={[styles.progressFill, { width: `${(idx / queue.length) * 100}%` }]} /></View>
       <Pressable style={styles.flash} onPress={() => setRevealed(true)}>
         <Text style={[styles.levelTag, { backgroundColor: LEVEL_COLOR[e.level] }]}>{e.level}</Text>
         {revealed && <Text style={styles.sub}>{e.reading} · {toRomaji(e.reading, e.pos === 'particle')}</Text>}
@@ -64,7 +81,9 @@ function ReviewSession({ queue, onExit }: { queue: string[]; onExit: () => void 
         ) : (
           <Text style={[styles.sub, { marginTop: 24 }]}>Do you remember it? Tap to reveal.</Text>
         )}
-        <Pressable onPress={() => speakJapanese(e.surface)} style={styles.speakBtn}><Text>🔊</Text></Pressable>
+        <Pressable onPress={() => speakJapanese(e.surface)} style={styles.speakBtn} accessibilityLabel="Play pronunciation">
+          <Ionicons name="volume-high" size={22} color={C.accent} />
+        </Pressable>
       </Pressable>
       {revealed && (
         <View style={styles.grades}>
@@ -74,8 +93,9 @@ function ReviewSession({ queue, onExit }: { queue: string[]; onExit: () => void 
             ['good', 'Good', C.teal],
             ['easy', 'Easy', '#3D8BFD'],
           ] as [Grade, string, string][]).map(([g, label, color]) => (
-            <Pressable key={g} style={[styles.gradeBtn, { backgroundColor: color }]} onPress={() => grade(g)}>
+            <Pressable key={g} style={[styles.gradeBtn, { backgroundColor: color }]} onPress={() => grade(g)} accessibilityLabel={`${label}, see it again in ${formatGap(schedule(card, g))}`}>
               <Text style={styles.primaryText}>{label}</Text>
+              <Text style={styles.gradeGap}>{formatGap(schedule(card, g))}</Text>
             </Pressable>
           ))}
         </View>
@@ -88,10 +108,21 @@ export default function WordsScreen() {
   const { state, removeWord, saveWord } = useStore();
   const [reviewing, setReviewing] = useState<string[] | null>(null);
   const [open, setOpen] = useState<Card | null>(null);
+  const [query, setQuery] = useState('');
+  const [level, setLevel] = useState<Level | 'all'>('all');
 
   const cards = useMemo(() => Object.values(state.cards).sort((a, b) => a.due - b.due), [state.cards]);
   const due = cards.filter((c) => isDue(c));
-  const newToday = cards.filter((c) => Date.now() - c.addedAt < 24 * 3600 * 1000).length;
+  const mastered = cards.filter(isMastered).length;
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return cards.filter((c) => {
+      const e = lookup(c.word);
+      if (level !== 'all' && e?.level !== level) return false;
+      if (!q) return true;
+      return [c.word, e?.reading, e?.meaning, e && toRomaji(e.reading)].some((f) => f?.toLowerCase().includes(q));
+    });
+  }, [cards, query, level]);
 
   if (reviewing) {
     return (
@@ -105,14 +136,15 @@ export default function WordsScreen() {
     <SafeAreaView style={styles.root} edges={['top']}>
       <FlatList
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-        data={cards}
+        data={shown}
+        keyboardShouldPersistTaps="handled"
         keyExtractor={(c) => c.word}
         ListHeaderComponent={
           <View>
             <Text style={styles.h1}>Your words</Text>
             <View style={styles.statsRow}>
               <View style={styles.stat}><Text style={styles.statNum}>{due.length}</Text><Text style={styles.sub}>To review</Text></View>
-              <View style={styles.stat}><Text style={styles.statNum}>{newToday}</Text><Text style={styles.sub}>New today</Text></View>
+              <View style={styles.stat}><Text style={styles.statNum}>{mastered}</Text><Text style={styles.sub}>Mastered</Text></View>
               <View style={styles.stat}><Text style={styles.statNum}>{cards.length}</Text><Text style={styles.sub}>Saved</Text></View>
             </View>
             <Pressable
@@ -129,13 +161,52 @@ export default function WordsScreen() {
                 <Text style={[styles.primaryText, { color: C.ink }]}>Practice all anyway</Text>
               </Pressable>
             )}
+            {cards.length > 0 && (
+              <>
+                <View style={styles.search}>
+                  <Ionicons name="search" size={18} color={C.sub} />
+                  <TextInput
+                    value={query}
+                    onChangeText={setQuery}
+                    placeholder="Search word, reading or meaning"
+                    placeholderTextColor={C.sub}
+                    style={styles.searchInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    nativeID="word-search"
+                  />
+                  {query.length > 0 && (
+                    <Pressable onPress={() => setQuery('')} accessibilityLabel="Clear search" hitSlop={8}>
+                      <Ionicons name="close-circle" size={18} color={C.sub} />
+                    </Pressable>
+                  )}
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 4 }}>
+                  {(['all', ...LEVELS] as const).map((lv) => (
+                    <Pressable
+                      key={lv}
+                      onPress={() => setLevel(lv)}
+                      style={[styles.chip, level === lv && { backgroundColor: lv === 'all' ? C.ink : LEVEL_COLOR[lv], borderColor: 'transparent' }]}
+                    >
+                      <Text style={[styles.chipText, level === lv && { color: '#fff' }]}>{lv === 'all' ? 'All levels' : lv}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </>
+            )}
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 48 }}>👂</Text>
-            <Text style={styles.sub}>Tap any word in a scene or reel to save it here.</Text>
-          </View>
+          cards.length > 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.sub}>No saved words match.</Text>
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Text style={{ fontSize: 48 }}>👂</Text>
+              <Text style={[styles.sub, { textAlign: 'center' }]}>Tap any word in a scene or reel to save it here.</Text>
+            </View>
+          )
         }
         renderItem={({ item }) => {
           const e = lookup(item.word);
@@ -147,7 +218,7 @@ export default function WordsScreen() {
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 {e && <Text style={[styles.levelTag, { backgroundColor: LEVEL_COLOR[e.level] }]}>{e.level}</Text>}
-                <Text style={[styles.sub, { fontSize: 12 }]}>{describeDue(item)}</Text>
+                <Text style={[styles.sub, { fontSize: 12 }]}>{isMastered(item) ? '★ Mastered · ' : ''}{describeDue(item)}</Text>
               </View>
             </Pressable>
           );
@@ -157,7 +228,11 @@ export default function WordsScreen() {
         word={open?.word ?? null}
         saved={!!(open && state.cards[open.word])}
         context={open ? { jp: open.lineJp, en: open.lineEn } : undefined}
-        onSave={() => open && saveWord(open.word, open.clipId, open.lineJp, open.lineEn)}
+        onSave={() => {
+          if (!open) return;
+          success();
+          saveWord(open.word, open.clipId, open.lineJp, open.lineEn);
+        }}
         onRemove={() => {
           if (open) removeWord(open.word);
           setOpen(null);
@@ -192,5 +267,12 @@ const styles = StyleSheet.create({
   ctx: { backgroundColor: C.bg, padding: 12, borderRadius: 12, marginTop: 12, alignSelf: 'stretch' },
   speakBtn: { position: 'absolute', top: 16, right: 16, width: 44, height: 44, borderRadius: 22, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center' },
   grades: { flexDirection: 'row', gap: 8 },
-  gradeBtn: { flex: 1, paddingVertical: 16, borderRadius: 14, alignItems: 'center' },
+  gradeBtn: { flex: 1, paddingVertical: 12, borderRadius: 14, alignItems: 'center' },
+  gradeGap: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  progress: { height: 6, backgroundColor: C.line, borderRadius: 3, marginTop: 10, overflow: 'hidden' },
+  progressFill: { height: 6, backgroundColor: C.accent },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.card, borderWidth: 1, borderColor: C.line, borderRadius: 14, paddingHorizontal: 12, marginBottom: 8 },
+  searchInput: { flex: 1, paddingVertical: 12, fontSize: 15, color: C.ink },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: C.line, backgroundColor: C.card },
+  chipText: { color: C.ink, fontSize: 13, fontWeight: '700' },
 });

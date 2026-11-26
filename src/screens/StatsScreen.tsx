@@ -1,10 +1,41 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ACHIEVEMENTS, computeStreak, dayKey, useStore } from '../lib/store';
-import { C } from '../lib/theme';
+import { Level, LEVELS, lookup } from '../data/dictionary';
+import { isMastered } from '../lib/srs';
+import { ACHIEVEMENTS, computeStreak, DayStats, dayKey, useStore } from '../lib/store';
+import { C, LEVEL_COLOR } from '../lib/theme';
 
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const WEEKS = 12;
+
+// 0 = nothing, 1..4 = more practice; based on minutes, with reviews and scenes counting a little
+function intensity(d: DayStats | undefined, goalMin: number): number {
+  if (!d) return 0;
+  const min = d.seconds / 60 + d.reviews * 0.25 + d.clips * 0.5;
+  if (min <= 0) return 0;
+  const r = min / goalMin;
+  return r >= 1 ? 4 : r >= 0.6 ? 3 : r >= 0.3 ? 2 : 1;
+}
+const HEAT = ['#F1ECE4', '#FFD3C6', '#FFA88F', '#FF7B5C', '#E5512F'];
+
+function bestStreak(days: Record<string, DayStats>): number {
+  const keys = Object.keys(days).filter((k) => {
+    const s = days[k];
+    return s.seconds >= 30 || s.reviews > 0 || s.clips > 0;
+  }).sort();
+  let best = 0;
+  let run = 0;
+  let prev: Date | null = null;
+  for (const k of keys) {
+    const [y, m, d] = k.split('-').map(Number);
+    const cur = new Date(y, m - 1, d);
+    run = prev && Math.round((cur.getTime() - prev.getTime()) / 86400000) === 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = cur;
+  }
+  return best;
+}
 
 export default function StatsScreen() {
   const { state } = useStore();
@@ -20,6 +51,24 @@ export default function StatsScreen() {
     return { label: DOW[d.getDay()], min: (s?.seconds ?? 0) / 60 };
   });
   const maxMin = Math.max(state.profile.dailyGoalMin, ...week.map((w) => w.min));
+
+  // calendar grid: columns are weeks (oldest first), rows are Sunday..Saturday
+  const end = new Date();
+  const start = new Date(end);
+  start.setDate(end.getDate() - end.getDay() - (WEEKS - 1) * 7);
+  const grid = Array.from({ length: WEEKS }, (_, w) =>
+    Array.from({ length: 7 }, (_, d) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + w * 7 + d);
+      return day > end ? -1 : intensity(state.days[dayKey(day)], state.profile.dailyGoalMin);
+    }),
+  );
+  const activeDays = Object.values(state.days).filter((d) => d.seconds >= 30 || d.reviews > 0 || d.clips > 0).length;
+
+  const cards = Object.values(state.cards);
+  const byLevel = LEVELS.map((lv) => ({ lv, n: cards.filter((c) => lookup(c.word)?.level === lv).length }));
+  const otherWords = cards.length - byLevel.reduce((a, b) => a + b.n, 0);
+  const mastered = cards.filter(isMastered).length;
 
   const totals = Object.values(state.days).reduce(
     (a, d) => ({ seconds: a.seconds + d.seconds, reviews: a.reviews + d.reviews }),
@@ -37,8 +86,8 @@ export default function StatsScreen() {
             <Text style={styles.sub}>day streak</Text>
           </View>
           <View style={[styles.box, { flex: 1 }]}>
-            <Text style={styles.big}>{Object.keys(state.cards).length}</Text>
-            <Text style={styles.sub}>words saved</Text>
+            <Text style={styles.big}>{bestStreak(state.days)}</Text>
+            <Text style={styles.sub}>best streak</Text>
           </View>
         </View>
 
@@ -64,6 +113,63 @@ export default function StatsScreen() {
               </View>
             ))}
           </View>
+        </View>
+
+        <View style={styles.box}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.h3}>Last {WEEKS} weeks</Text>
+            <Text style={styles.sub}>{activeDays} active day{activeDays === 1 ? '' : 's'}</Text>
+          </View>
+          <View style={styles.heat}>
+            <View style={styles.heatLabels}>
+              {DOW.map((d, i) => (
+                <Text key={i} style={styles.heatLabel}>{i % 2 ? d : ''}</Text>
+              ))}
+            </View>
+            {grid.map((col, w) => (
+              <View key={w} style={styles.heatCol}>
+                {col.map((v, d) => (
+                  <View key={d} style={[styles.heatCell, { backgroundColor: v < 0 ? 'transparent' : HEAT[v] }]} />
+                ))}
+              </View>
+            ))}
+          </View>
+          <View style={[styles.rowBetween, { marginTop: 8 }]}>
+            <Text style={styles.sub}>Less</Text>
+            <View style={{ flexDirection: 'row', gap: 3 }}>
+              {HEAT.map((c) => <View key={c} style={[styles.heatCell, { backgroundColor: c, width: 12 }]} />)}
+            </View>
+            <Text style={styles.sub}>Goal met</Text>
+          </View>
+        </View>
+
+        <View style={styles.box}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.h3}>Your words</Text>
+            <Text style={styles.sub}>{cards.length} saved · {mastered} mastered</Text>
+          </View>
+          {cards.length === 0 ? (
+            <Text style={styles.sub}>Save words from scenes and reels to see them by level here.</Text>
+          ) : (
+            <>
+              <View style={styles.stack}>
+                {byLevel.filter((b) => b.n > 0).map((b) => (
+                  <View key={b.lv} style={{ flex: b.n, backgroundColor: LEVEL_COLOR[b.lv] }} />
+                ))}
+                {otherWords > 0 && <View style={{ flex: otherWords, backgroundColor: LEVEL_COLOR.Other }} />}
+              </View>
+              <View style={styles.legend}>
+                {byLevel.map((b) => (
+                  <Text key={b.lv} style={styles.legendItem}>
+                    <Text style={{ color: LEVEL_COLOR[b.lv as Level] }}>●</Text> {b.lv} {b.n}
+                  </Text>
+                ))}
+                {otherWords > 0 && (
+                  <Text style={styles.legendItem}><Text style={{ color: LEVEL_COLOR.Other }}>●</Text> Other {otherWords}</Text>
+                )}
+              </View>
+            </>
+          )}
         </View>
 
         <View style={styles.row}>
@@ -97,6 +203,15 @@ const styles = StyleSheet.create({
   sub: { color: C.sub, fontSize: 13 },
   big: { fontSize: 26, fontWeight: '800', color: C.ink },
   row: { flexDirection: 'row', gap: 10 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  heat: { flexDirection: 'row', gap: 3, marginTop: 10 },
+  heatLabels: { gap: 3, marginRight: 2 },
+  heatLabel: { fontSize: 9, color: C.sub, height: 16, lineHeight: 16, width: 10 },
+  heatCol: { flex: 1, gap: 3 },
+  heatCell: { height: 16, borderRadius: 4, alignSelf: 'stretch' },
+  stack: { flexDirection: 'row', height: 14, borderRadius: 7, overflow: 'hidden', marginTop: 10, backgroundColor: C.line },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
+  legendItem: { fontSize: 12, color: C.ink, fontWeight: '600' },
   box: { backgroundColor: C.card, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: C.line, marginBottom: 10 },
   bar: { height: 12, borderRadius: 6, backgroundColor: C.line, marginTop: 10, overflow: 'hidden' },
   barFill: { height: 12, backgroundColor: C.accent },

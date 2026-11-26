@@ -24,7 +24,7 @@ export default function WordSheet({ word, saved, onSave, onRemove, onClose, cont
     if (!word || local) return;
     let alive = true;
     setOnline(null);
-    lookupOnline(word, hint).then((entry) => alive && setOnline({ word, entry }));
+    void lookupOnline(word, hint).then((entry) => alive && setOnline({ word, entry }));
     return () => {
       alive = false;
     };

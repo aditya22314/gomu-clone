@@ -104,7 +104,7 @@ function QuizRun({ entries, title, onFinish }: { entries: Entry[]; title: string
       setCombo(0);
       setMissed((m) => [...m, q.entry]);
     }
-    if (q.type === 'context' || q.type === 'listen') speakJapanese(q.entry.surface);
+    if (q.type === 'context' || q.type === 'listen') void speakJapanese(q.entry.surface);
     if (state.cards[q.entry.surface]) review(q.entry.surface, ok ? 'good' : 'again');
   };
 

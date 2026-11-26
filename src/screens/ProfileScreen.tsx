@@ -85,13 +85,13 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.box}>
-          <Toggle label="Daily reminder" hint="One notification a day, nothing else." value={p.reminderOn} onChange={(v) => setReminder(v)} />
+          <Toggle label="Daily reminder" hint="One notification a day, nothing else." value={p.reminderOn} onChange={(v) => void setReminder(v)} />
           {p.reminderOn && (
             <View style={{ gap: 8 }}>
               <Text style={styles.sub}>Hour</Text>
-              <Stepper value={p.reminderHour} min={0} max={23} onChange={(h) => setReminder(true, h, p.reminderMinute)} format={(h) => formatTime(h, p.reminderMinute)} />
+              <Stepper value={p.reminderHour} min={0} max={23} onChange={(h) => void setReminder(true, h, p.reminderMinute)} format={(h) => formatTime(h, p.reminderMinute)} />
               <Text style={styles.sub}>Minute</Text>
-              <Stepper value={p.reminderMinute} min={0} max={45} step={15} onChange={(m) => setReminder(true, p.reminderHour, m)} format={(m) => `:${String(m).padStart(2, '0')}`} />
+              <Stepper value={p.reminderMinute} min={0} max={45} step={15} onChange={(m) => void setReminder(true, p.reminderHour, m)} format={(m) => `:${String(m).padStart(2, '0')}`} />
             </View>
           )}
           {!!note && <Text style={[styles.sub, { marginTop: 6 }]}>{note}</Text>}
@@ -120,7 +120,7 @@ export default function ProfileScreen() {
             new one.
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Pressable style={[styles.action, { flex: 1 }]} onPress={doExport}>
+            <Pressable style={[styles.action, { flex: 1 }]} onPress={() => void doExport()}>
               <Text style={styles.actionText}>Back up my data</Text>
             </Pressable>
             <Pressable style={[styles.action, styles.actionGhost, { flex: 1 }]} onPress={() => { setRestoring((r) => !r); setBackupNote(null); }}>

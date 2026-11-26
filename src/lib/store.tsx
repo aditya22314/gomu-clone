@@ -156,7 +156,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const raw = await AsyncStorage.getItem(KEY);
         if (raw) {

@@ -40,7 +40,7 @@ function ClipCard({ clip, active, height }: { clip: Clip; active: boolean; heigh
     if (!playing || !active || word) return;
     const myGen = ++gen.current;
     const line = clip.lines[lineIdx];
-    speakJapanese(line.jp.replace(/ /g, ''), {
+    void speakJapanese(line.jp.replace(/ /g, ''), {
       slow: p.slowAudio,
       voice: line.voice,
       onDone: () => {

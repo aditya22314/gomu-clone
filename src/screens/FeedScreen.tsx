@@ -101,8 +101,8 @@ function ClipCard({ clip, active, height }: { clip: Clip; active: boolean; heigh
           <Text style={styles.speaker}>{clip.lines[lineIdx].speaker}</Text>
         )}
         <View style={styles.dots} accessibilityLabel={`Line ${Math.max(1, shownLine + 1)} of ${clip.lines.length}`}>
-          {clip.lines.map((_, i) => (
-            <View key={i} style={[styles.dot, i <= shownLine && styles.dotOn]} />
+          {clip.lines.map((l, i) => (
+            <View key={`${l.speaker}:${l.jp}`} style={[styles.dot, i <= shownLine && styles.dotOn]} />
           ))}
         </View>
       </View>

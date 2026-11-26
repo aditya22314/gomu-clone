@@ -7,6 +7,7 @@ import { ACHIEVEMENTS, computeStreak, DayStats, dayKey, useStore } from '../lib/
 import { C, LEVEL_COLOR } from '../lib/theme';
 
 const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WEEKS = 12;
 
 // 0 = nothing, 1..4 = more practice; based on minutes, with reviews and scenes counting a little
@@ -48,7 +49,7 @@ export default function StatsScreen() {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const s = state.days[dayKey(d)];
-    return { label: DOW[d.getDay()], min: (s?.seconds ?? 0) / 60 };
+    return { key: dayKey(d), label: DOW[d.getDay()], min: (s?.seconds ?? 0) / 60 };
   });
   const maxMin = Math.max(state.profile.dailyGoalMin, ...week.map((w) => w.min));
 
@@ -60,7 +61,7 @@ export default function StatsScreen() {
     Array.from({ length: 7 }, (_, d) => {
       const day = new Date(start);
       day.setDate(start.getDate() + w * 7 + d);
-      return day > end ? -1 : intensity(state.days[dayKey(day)], state.profile.dailyGoalMin);
+      return { key: dayKey(day), v: day > end ? -1 : intensity(state.days[dayKey(day)], state.profile.dailyGoalMin) };
     }),
   );
   const activeDays = Object.values(state.days).filter((d) => d.seconds >= 30 || d.reviews > 0 || d.clips > 0).length;
@@ -103,8 +104,8 @@ export default function StatsScreen() {
         <View style={styles.box}>
           <Text style={styles.h3}>Minutes this week</Text>
           <View style={styles.chart}>
-            {week.map((w, i) => (
-              <View key={i} style={styles.col}>
+            {week.map((w) => (
+              <View key={w.key} style={styles.col}>
                 <Text style={styles.colVal}>{w.min >= 1 ? Math.round(w.min) : ''}</Text>
                 <View style={styles.colTrack}>
                   <View style={[styles.colFill, { height: `${(w.min / maxMin) * 100}%`, backgroundColor: w.min >= state.profile.dailyGoalMin ? C.teal : C.accent }]} />
@@ -122,14 +123,14 @@ export default function StatsScreen() {
           </View>
           <View style={styles.heat}>
             <View style={styles.heatLabels}>
-              {DOW.map((d, i) => (
-                <Text key={i} style={styles.heatLabel}>{i % 2 ? d : ''}</Text>
+              {DAY_NAMES.map((name, i) => (
+                <Text key={name} style={styles.heatLabel}>{i % 2 ? DOW[i] : ''}</Text>
               ))}
             </View>
-            {grid.map((col, w) => (
-              <View key={w} style={styles.heatCol}>
-                {col.map((v, d) => (
-                  <View key={d} style={[styles.heatCell, { backgroundColor: v < 0 ? 'transparent' : HEAT[v] }]} />
+            {grid.map((col) => (
+              <View key={col[0].key} style={styles.heatCol}>
+                {col.map((cell) => (
+                  <View key={cell.key} style={[styles.heatCell, { backgroundColor: cell.v < 0 ? 'transparent' : HEAT[cell.v] }]} />
                 ))}
               </View>
             ))}

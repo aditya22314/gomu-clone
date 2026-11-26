@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Level } from '../data/dictionary';
+import { CLIPS } from '../data/clips';
+import { Level, lookup, registerEntry } from '../data/dictionary';
 import { Card, Grade, newCard, schedule } from './srs';
 
 export type Profile = {
@@ -28,7 +29,10 @@ export type State = {
   watched: string[];
   achievements: Record<string, number>;
   levelQuiz: Partial<Record<Level, number>>; // best score 0..100
+  userReels: UserReel[];
 };
+
+export type UserReel = { id: string; videoId: string; title: string; addedAt: number };
 
 export const DEFAULT_PROFILE: Profile = {
   level: 'N5',
@@ -53,6 +57,7 @@ const INITIAL: State = {
   watched: [],
   achievements: {},
   levelQuiz: {},
+  userReels: [],
 };
 
 const KEY = 'mimi.state.v1';
@@ -86,8 +91,9 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'first-word', emoji: '🌱', title: 'First word', desc: 'Save your first word', test: (s) => Object.keys(s.cards).length >= 1 },
   { id: 'words-25', emoji: '📚', title: 'Word collector', desc: 'Save 25 words', test: (s) => Object.keys(s.cards).length >= 25 },
   { id: 'words-100', emoji: '🏯', title: 'Word hoard', desc: 'Save 100 words', test: (s) => Object.keys(s.cards).length >= 100 },
+  { id: 'clips-20', emoji: '📺', title: 'Regular', desc: 'Watch 20 different scenes', test: (s) => s.watched.length >= 20 },
   { id: 'clips-5', emoji: '🎬', title: 'Binge starter', desc: 'Watch 5 different scenes', test: (s) => s.watched.length >= 5 },
-  { id: 'clips-all', emoji: '🍿', title: 'Seen it all', desc: 'Watch every scene', test: (s) => s.watched.length >= 16 },
+  { id: 'clips-all', emoji: '🍿', title: 'Seen it all', desc: 'Watch every scene', test: (s) => s.watched.length >= CLIPS.length },
   { id: 'streak-3', emoji: '🔥', title: 'On fire', desc: '3 day streak', test: (s) => computeStreak(s.days) >= 3 },
   { id: 'streak-7', emoji: '🗓️', title: 'One week', desc: '7 day streak', test: (s) => computeStreak(s.days) >= 7 },
   { id: 'streak-30', emoji: '🌕', title: 'Full moon', desc: '30 day streak', test: (s) => computeStreak(s.days) >= 30 },
@@ -129,6 +135,8 @@ type Actions = {
   updateProfile: (p: Partial<Profile>) => void;
   saveWord: (word: string, clipId: string, lineJp: string, lineEn: string) => void;
   removeWord: (word: string) => void;
+  addReel: (videoId: string, title: string) => void;
+  removeReel: (videoId: string) => void;
   review: (word: string, grade: Grade) => void;
   addWatchSeconds: (sec: number) => void;
   markClipWatched: (clipId: string) => void;
@@ -151,6 +159,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const raw = await AsyncStorage.getItem(KEY);
         if (raw) {
           const parsed = JSON.parse(raw) as State;
+          Object.values(parsed.cards ?? {}).forEach((c) => c.entry && registerEntry(c.entry));
           setState({ ...INITIAL, ...parsed, profile: { ...DEFAULT_PROFILE, ...parsed.profile } });
         }
       } catch {
@@ -175,7 +184,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding: (p) => update((s) => ({ ...s, onboarded: true, profile: { ...s.profile, ...p } })),
       updateProfile: (p) => update((s) => ({ ...s, profile: { ...s.profile, ...p } })),
       saveWord: (word, clipId, lineJp, lineEn) =>
-        update((s) => (s.cards[word] ? s : { ...s, cards: { ...s.cards, [word]: newCard(word, clipId, lineJp, lineEn) } })),
+        update((s) =>
+          s.cards[word] ? s : { ...s, cards: { ...s.cards, [word]: newCard(word, clipId, lineJp, lineEn, Date.now(), lookup(word)) } },
+        ),
+      addReel: (videoId, title) =>
+        update((s) =>
+          s.userReels.some((r) => r.videoId === videoId)
+            ? s
+            : { ...s, userReels: [{ id: `user-${videoId}`, videoId, title, addedAt: Date.now() }, ...s.userReels] },
+        ),
+      removeReel: (videoId) => update((s) => ({ ...s, userReels: s.userReels.filter((r) => r.videoId !== videoId) })),
       removeWord: (word) =>
         update((s) => {
           const cards = { ...s.cards };

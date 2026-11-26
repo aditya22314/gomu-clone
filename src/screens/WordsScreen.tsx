@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WordSheet from '../components/WordSheet';
 import { CLIPS } from '../data/clips';
-import { lookup } from '../data/dictionary';
+import { joinTokens, lookup } from '../data/dictionary';
 import { toRomaji } from '../lib/romaji';
 import { speakJapanese } from '../lib/speech';
 import { Card, describeDue, Grade, isDue } from '../lib/srs';
@@ -56,7 +56,7 @@ function ReviewSession({ queue, onExit }: { queue: string[]; onExit: () => void 
           <>
             <Text style={styles.flashMeaning}>{e.meaning}</Text>
             <View style={styles.ctx}>
-              <Text style={{ color: C.ink, fontSize: 15 }}>{card.lineJp.replace(/ /g, '')}</Text>
+              <Text style={{ color: C.ink, fontSize: 15 }}>{joinTokens(card.lineJp)}</Text>
               <Text style={styles.sub}>{card.lineEn}</Text>
               {clip && <Text style={[styles.sub, { marginTop: 4 }]}>Heard in “{clip.title}”</Text>}
             </View>
@@ -134,7 +134,7 @@ export default function WordsScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Text style={{ fontSize: 48 }}>👂</Text>
-            <Text style={styles.sub}>Tap any word in a scene on the Watch tab to save it here.</Text>
+            <Text style={styles.sub}>Tap any word in a scene or reel to save it here.</Text>
           </View>
         }
         renderItem={({ item }) => {

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View, ListViewToken as ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SceneArt from '../components/SceneArt';
 import Subtitle from '../components/Subtitle';
 import WordSheet from '../components/WordSheet';
 import { CATEGORIES, Category, Clip, CLIPS } from '../data/clips';
@@ -85,8 +86,16 @@ function ClipCard({ clip, active, height }: { clip: Clip; active: boolean; heigh
   return (
     <View style={[styles.card, { height, backgroundColor: clip.color }]}>
       <View style={styles.sceneArea}>
-        <Text style={styles.sceneEmoji}>{clip.scene}</Text>
-        <Text style={styles.speaker}>{playing || finished ? clip.lines[lineIdx].speaker : ' '}</Text>
+        <SceneArt
+          backdrop={clip.backdrop}
+          cast={clip.cast}
+          rain={clip.rain}
+          speaker={playing || finished ? clip.lines[lineIdx].speaker : undefined}
+          talking={playing && active && !word}
+        />
+        {(playing || finished) && (
+          <Text style={styles.speaker}>{clip.lines[lineIdx].speaker}</Text>
+        )}
       </View>
 
       <View style={styles.meta}>
@@ -221,19 +230,18 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.feedBg },
   topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, gap: 10 },
-  logo: { color: '#fff', fontSize: 22, fontWeight: '800' },
+  logo: { color: '#fff', fontSize: 22, fontWeight: '800', flexShrink: 0 },
   chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)' },
   chipOn: { backgroundColor: '#fff' },
   chipText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   card: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10 },
-  sceneArea: { flex: 1, minHeight: 120, alignItems: 'center', justifyContent: 'center' },
-  sceneEmoji: { fontSize: 84 },
-  speaker: { color: 'rgba(255,255,255,0.85)', fontSize: 15, fontWeight: '700', marginTop: 8 },
+  sceneArea: { flex: 1, minHeight: 150, marginBottom: 10 },
+  speaker: { position: 'absolute', top: 10, left: 10, color: '#fff', fontSize: 13, fontWeight: '800', backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, overflow: 'hidden' },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
   badge: { color: '#fff', fontWeight: '800', fontSize: 12, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, overflow: 'hidden' },
   badgeGhost: { color: '#fff', fontSize: 12, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.18)', overflow: 'hidden' },
   title: { color: '#fff', fontWeight: '700', fontSize: 16, flex: 1 },
-  subs: { flexGrow: 0, maxHeight: '55%' },
+  subs: { flexGrow: 0, maxHeight: '46%' },
   controls: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 8 },
   ctrl: { width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   ctrlMain: { width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(255,255,255,0.3)' },

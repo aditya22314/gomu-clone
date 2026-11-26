@@ -1,6 +1,7 @@
-import React from 'react';
-import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { lookup } from '../data/dictionary';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Entry, joinTokens, lookup } from '../data/dictionary';
+import { lookupOnline } from '../lib/jisho';
 import { toRomaji } from '../lib/romaji';
 import { speakJapanese } from '../lib/speech';
 import { C, LEVEL_COLOR } from '../lib/theme';
@@ -12,13 +13,51 @@ type Props = {
   onRemove: () => void;
   onClose: () => void;
   context?: { jp: string; en: string };
+  // reading / dictionary form / part of speech from the subtitle tokenizer, for words not in the built-in dictionary
+  hint?: { reading?: string; base?: string; pos?: string };
 };
 
-export default function WordSheet({ word, saved, onSave, onRemove, onClose, context }: Props) {
-  const e = word ? lookup(word) : undefined;
+export default function WordSheet({ word, saved, onSave, onRemove, onClose, context, hint }: Props) {
+  const [online, setOnline] = useState<{ word: string; entry: Entry | null } | null>(null);
+  const local = word ? lookup(word) : undefined;
+  useEffect(() => {
+    if (!word || local) return;
+    let alive = true;
+    setOnline(null);
+    lookupOnline(word, hint).then((entry) => alive && setOnline({ word, entry }));
+    return () => {
+      alive = false;
+    };
+  }, [word]);
+  const e = local ?? (online?.word === word ? online.entry ?? undefined : undefined);
+  const loading = !!word && !local && online?.word !== word;
+  const failed = !!word && !local && online?.word === word && !online.entry;
   return (
     <Modal visible={!!word} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close word card" />
+      {(loading || failed) && word && (
+        <View style={styles.sheet}>
+          <View style={styles.handle} />
+          {hint?.reading && <Text style={styles.reading}>{hint.reading}</Text>}
+          <Text style={styles.word}>{word}</Text>
+          {loading ? (
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 12 }}>
+              <ActivityIndicator color={C.accent} />
+              <Text style={styles.romaji}>Looking it up…</Text>
+            </View>
+          ) : (
+            <Text style={[styles.meaning, { color: C.sub }]}>Couldn't load the meaning here. Check your connection, or open it in Jisho.</Text>
+          )}
+          <View style={styles.actions}>
+            <Pressable
+              style={[styles.btn, styles.btnGhost]}
+              onPress={() => Linking.openURL(`https://jisho.org/search/${encodeURIComponent(hint?.base ?? word)}`)}
+            >
+              <Text style={[styles.btnText, { color: C.ink }]}>Open in Jisho ↗</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
       {e && (
         <View style={styles.sheet}>
           <View style={styles.handle} />
@@ -33,14 +72,14 @@ export default function WordSheet({ word, saved, onSave, onRemove, onClose, cont
             </Pressable>
           </View>
           <View style={styles.tags}>
-            <Text style={[styles.tag, { backgroundColor: LEVEL_COLOR[e.level], color: '#fff' }]}>{e.level}</Text>
+            <Text style={[styles.tag, { backgroundColor: LEVEL_COLOR[e.level], color: '#fff' }]}>{e.level === 'Other' ? 'not on JLPT lists' : e.level}</Text>
             <Text style={[styles.tag, { backgroundColor: C.line, color: C.ink }]}>{e.pos}</Text>
             {e.base && <Text style={[styles.tag, { backgroundColor: C.line, color: C.ink }]}>from {e.base}</Text>}
           </View>
           <Text style={styles.meaning}>{e.meaning}</Text>
           {context && (
             <View style={styles.context}>
-              <Text style={styles.contextJp}>{context.jp.replace(/ /g, '')}</Text>
+              <Text style={styles.contextJp}>{joinTokens(context.jp)}</Text>
               <Text style={styles.contextEn}>{context.en}</Text>
             </View>
           )}

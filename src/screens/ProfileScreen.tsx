@@ -38,7 +38,7 @@ export default function ProfileScreen() {
 
         <View style={styles.box}>
           <Text style={styles.h3}>Your level</Text>
-          <Text style={styles.sub}>The Watch tab shows scenes at and around this level.</Text>
+          <Text style={styles.sub}>The Scenes tab shows scenes at and around this level.</Text>
           <View style={styles.wrap}>
             {LEVELS.map((lv) => (
               <Pill key={lv} label={lv} on={p.level === lv} color={LEVEL_COLOR[lv]} onPress={() => updateProfile({ level: lv })} />

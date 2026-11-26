@@ -23,7 +23,7 @@ function bestStreak(days: Record<string, DayStats>): number {
   const keys = Object.keys(days).filter((k) => {
     const s = days[k];
     return s.seconds >= 30 || s.reviews > 0 || s.clips > 0;
-  }).sort();
+  }).sort((a, b) => a.localeCompare(b));
   let best = 0;
   let run = 0;
   let prev: Date | null = null;

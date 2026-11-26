@@ -94,7 +94,7 @@ export default function ProfileScreen() {
               <Stepper value={p.reminderMinute} min={0} max={45} step={15} onChange={(m) => setReminder(true, p.reminderHour, m)} format={(m) => `:${String(m).padStart(2, '0')}`} />
             </View>
           )}
-          {note && <Text style={[styles.sub, { marginTop: 6 }]}>{note}</Text>}
+          {!!note && <Text style={[styles.sub, { marginTop: 6 }]}>{note}</Text>}
         </View>
 
         <View style={styles.box}>
@@ -127,7 +127,7 @@ export default function ProfileScreen() {
               <Text style={[styles.actionText, { color: C.ink }]}>{restoring ? 'Cancel' : 'Restore'}</Text>
             </Pressable>
           </View>
-          {backupText && !restoring && (
+          {!!backupText && !restoring && (
             <TextInput style={styles.backupBox} value={backupText} multiline editable={false} selectTextOnFocus numberOfLines={4} />
           )}
           {restoring && (
@@ -149,7 +149,7 @@ export default function ProfileScreen() {
               </Pressable>
             </View>
           )}
-          {backupNote && <Text style={[styles.sub, { marginTop: 8, color: C.ink }]}>{backupNote}</Text>}
+          {!!backupNote && <Text style={[styles.sub, { marginTop: 8, color: C.ink }]}>{backupNote}</Text>}
         </View>
 
         <View style={styles.box}>

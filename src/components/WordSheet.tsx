@@ -38,7 +38,7 @@ export default function WordSheet({ word, saved, onSave, onRemove, onClose, cont
       {(loading || failed) && word && (
         <View style={styles.sheet}>
           <View style={styles.handle} />
-          {hint?.reading && <Text style={styles.reading}>{hint.reading}</Text>}
+          {!!hint?.reading && <Text style={styles.reading}>{hint.reading}</Text>}
           <Text style={styles.word}>{word}</Text>
           {loading ? (
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 12 }}>

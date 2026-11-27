@@ -18,13 +18,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import YoutubePlayer, { getYoutubeMeta, YoutubeIframeRef } from '../components/YouTubeView';
 import WordSheet from '../components/WordSheet';
 import { hasKanji } from '../data/dictionary';
-import { SHOWS, showById } from '../data/officialClips';
+import { SHOWS, ShowWord, showById } from '../data/officialClips';
 import { parseYouTubeId, Reel, ReelLine, ReelToken, REELS } from '../data/reels';
 import { toRomaji } from '../lib/romaji';
 import { useStore } from '../lib/store';
 import { C, LEVEL_COLOR } from '../lib/theme';
 
-type Tapped = { surface: string; hint?: { reading?: string; base?: string; pos?: string }; context: { jp: string; en: string } };
+type Tapped = {
+  surface: string;
+  hint?: { reading?: string; base?: string; pos?: string; meaning?: string; level?: ShowWord['lv'] };
+  context: { jp: string; en: string };
+};
 
 function lineText(l: ReelLine) {
   return l.tokens.map((t) => t.s).join('');
@@ -94,7 +98,7 @@ function LookupBox({ onLookup }: { onLookup: (word: string) => void }) {
   );
 }
 
-function ShowWords({ showId, saved, onTap }: { showId?: string; saved: Record<string, unknown>; onTap: (w: { w: string; r: string; en: string }) => void }) {
+function ShowWords({ showId, saved, onTap }: { showId?: string; saved: Record<string, unknown>; onTap: (w: ShowWord) => void }) {
   const show = showById(showId);
   if (!show) return null;
   return (
@@ -270,7 +274,13 @@ function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; acti
         <ShowWords
           showId={reel.show}
           saved={state.cards}
-          onTap={(w) => setTapped({ surface: w.w, hint: { reading: w.r }, context: { jp: w.w, en: `${w.en} · from “${reel.title}”, ${show?.name ?? ''}` } })}
+          onTap={(w) =>
+            setTapped({
+              surface: w.w,
+              hint: { reading: w.r, meaning: w.en, level: w.lv },
+              context: { jp: w.w, en: `${w.en} · from “${reel.title}”, ${show?.name ?? ''}` },
+            })
+          }
         />
         <LookupBox onLookup={(w) => setTapped({ surface: w, context: context(line) })} />
       </ScrollView>

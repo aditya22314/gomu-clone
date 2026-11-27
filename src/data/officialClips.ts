@@ -8,13 +8,16 @@ import type { Level } from './dictionary';
 //
 // `jaCaptions` marks clips where YouTube has Japanese captions, so they show in the player.
 
+// lv: rough JLPT level, or Other for words that are not on the usual lists
+export type ShowWord = { w: string; r: string; en: string; lv?: Level | 'Other' };
+
 export type Show = {
   id: string;
   name: string;
   jp: string;
   color: string;
   // everyday words that come up in this show, to tap and save while watching
-  words: { w: string; r: string; en: string }[];
+  words: ShowWord[];
 };
 
 export const SHOWS: Show[] = [
@@ -24,12 +27,12 @@ export const SHOWS: Show[] = [
     jp: 'ナルト',
     color: '#F08C00',
     words: [
-      { w: '忍者', r: 'にんじゃ', en: 'ninja' },
-      { w: '仲間', r: 'なかま', en: 'friend, comrade' },
-      { w: '夢', r: 'ゆめ', en: 'dream' },
+      { w: '忍者', r: 'にんじゃ', en: 'ninja', lv: 'Other' },
+      { w: '仲間', r: 'なかま', en: 'friend, comrade', lv: 'N3' },
+      { w: '夢', r: 'ゆめ', en: 'dream', lv: 'N3' },
       { w: '約束', r: 'やくそく', en: 'promise' },
       { w: '諦める', r: 'あきらめる', en: 'to give up' },
-      { w: '火影', r: 'ほかげ', en: 'Hokage (village leader)' },
+      { w: '火影', r: 'ほかげ', en: 'Hokage (village leader)', lv: 'Other' },
     ],
   },
   {
@@ -38,12 +41,12 @@ export const SHOWS: Show[] = [
     jp: '鬼滅の刃',
     color: '#14A38B',
     words: [
-      { w: '鬼', r: 'おに', en: 'demon, ogre' },
-      { w: '刀', r: 'かたな', en: 'sword' },
-      { w: '呼吸', r: 'こきゅう', en: 'breathing' },
+      { w: '鬼', r: 'おに', en: 'demon, ogre', lv: 'Other' },
+      { w: '刀', r: 'かたな', en: 'sword', lv: 'Other' },
+      { w: '呼吸', r: 'こきゅう', en: 'breathing', lv: 'N2' },
       { w: '妹', r: 'いもうと', en: 'younger sister' },
-      { w: '守る', r: 'まもる', en: 'to protect' },
-      { w: '強い', r: 'つよい', en: 'strong' },
+      { w: '守る', r: 'まもる', en: 'to protect', lv: 'N3' },
+      { w: '強い', r: 'つよい', en: 'strong', lv: 'N5' },
     ],
   },
   {
@@ -53,11 +56,11 @@ export const SHOWS: Show[] = [
     color: '#E64980',
     words: [
       { w: '家族', r: 'かぞく', en: 'family' },
-      { w: '任務', r: 'にんむ', en: 'mission' },
-      { w: '秘密', r: 'ひみつ', en: 'secret' },
-      { w: '学校', r: 'がっこう', en: 'school' },
+      { w: '任務', r: 'にんむ', en: 'mission', lv: 'N1' },
+      { w: '秘密', r: 'ひみつ', en: 'secret', lv: 'N3' },
+      { w: '学校', r: 'がっこう', en: 'school', lv: 'N5' },
       { w: '父', r: 'ちち', en: '(my) father' },
-      { w: '平和', r: 'へいわ', en: 'peace' },
+      { w: '平和', r: 'へいわ', en: 'peace', lv: 'N3' },
     ],
   },
   {
@@ -66,12 +69,12 @@ export const SHOWS: Show[] = [
     jp: '葬送のフリーレン',
     color: '#3D8BFD',
     words: [
-      { w: '魔法', r: 'まほう', en: 'magic' },
-      { w: '旅', r: 'たび', en: 'journey' },
-      { w: '勇者', r: 'ゆうしゃ', en: 'hero' },
-      { w: '思い出', r: 'おもいで', en: 'memory' },
-      { w: '弟子', r: 'でし', en: 'apprentice' },
-      { w: '時間', r: 'じかん', en: 'time' },
+      { w: '魔法', r: 'まほう', en: 'magic', lv: 'Other' },
+      { w: '旅', r: 'たび', en: 'journey', lv: 'N3' },
+      { w: '勇者', r: 'ゆうしゃ', en: 'hero', lv: 'Other' },
+      { w: '思い出', r: 'おもいで', en: 'memory', lv: 'N3' },
+      { w: '弟子', r: 'でし', en: 'apprentice', lv: 'N1' },
+      { w: '時間', r: 'じかん', en: 'time', lv: 'N5' },
     ],
   },
   {
@@ -80,12 +83,12 @@ export const SHOWS: Show[] = [
     jp: 'ワンピース',
     color: '#D93838',
     words: [
-      { w: '海賊', r: 'かいぞく', en: 'pirate' },
-      { w: '船', r: 'ふね', en: 'ship' },
-      { w: '宝', r: 'たから', en: 'treasure' },
-      { w: '帽子', r: 'ぼうし', en: 'hat' },
-      { w: '自由', r: 'じゆう', en: 'freedom' },
-      { w: '仲間', r: 'なかま', en: 'crewmate, friend' },
+      { w: '海賊', r: 'かいぞく', en: 'pirate', lv: 'Other' },
+      { w: '船', r: 'ふね', en: 'ship', lv: 'N4' },
+      { w: '宝', r: 'たから', en: 'treasure', lv: 'N2' },
+      { w: '帽子', r: 'ぼうし', en: 'hat', lv: 'N5' },
+      { w: '自由', r: 'じゆう', en: 'freedom', lv: 'N3' },
+      { w: '仲間', r: 'なかま', en: 'crewmate, friend', lv: 'N3' },
     ],
   },
   {
@@ -94,12 +97,12 @@ export const SHOWS: Show[] = [
     jp: '俺だけレベルアップな件',
     color: '#8B5CF6',
     words: [
-      { w: '影', r: 'かげ', en: 'shadow' },
-      { w: '王', r: 'おう', en: 'king' },
-      { w: '戦う', r: 'たたかう', en: 'to fight' },
-      { w: '弱い', r: 'よわい', en: 'weak' },
-      { w: '命令', r: 'めいれい', en: 'order, command' },
-      { w: '起きろ', r: 'おきろ', en: 'get up! (command)' },
+      { w: '影', r: 'かげ', en: 'shadow', lv: 'N2' },
+      { w: '王', r: 'おう', en: 'king', lv: 'N2' },
+      { w: '戦う', r: 'たたかう', en: 'to fight', lv: 'N2' },
+      { w: '弱い', r: 'よわい', en: 'weak', lv: 'N5' },
+      { w: '命令', r: 'めいれい', en: 'order, command', lv: 'N2' },
+      { w: '起きろ', r: 'おきろ', en: 'get up! (command)', lv: 'N5' },
     ],
   },
   {
@@ -110,10 +113,10 @@ export const SHOWS: Show[] = [
     words: [
       { w: '試合', r: 'しあい', en: 'match, game' },
       { w: '練習', r: 'れんしゅう', en: 'practice' },
-      { w: '飛ぶ', r: 'とぶ', en: 'to fly, to jump' },
+      { w: '飛ぶ', r: 'とぶ', en: 'to fly, to jump', lv: 'N5' },
       { w: '勝つ', r: 'かつ', en: 'to win' },
       { w: '負ける', r: 'まける', en: 'to lose' },
-      { w: '先輩', r: 'せんぱい', en: 'senior (at school or club)' },
+      { w: '先輩', r: 'せんぱい', en: 'senior (at school or club)', lv: 'N3' },
     ],
   },
 ];

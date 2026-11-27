@@ -3,7 +3,8 @@
 //   npx tsx scripts/import-subtitles.ts scripts/reels.json
 //
 // reels.json is a list of { videoId, title, channel, level, start?, end?, subtitles, translations? }
-// where `subtitles` is a WebVTT (.vtt) file of Japanese captions, and the optional `translations`
+// where `subtitles` is a WebVTT (.vtt) file of Japanese captions, or a .json transcript of
+// { segments: [{ start_ms, duration_ms, text }] } (the shape YouTube transcript tools return), and the optional `translations`
 // is a .vtt file of English captions with the same timings.
 // Only add videos whose captions you are allowed to use, and keep the channel credit.
 import fs from 'node:fs';
@@ -45,6 +46,16 @@ export function parseVtt(src: string): Cue[] {
   return cues;
 }
 
+export function parseSegments(src: string): Cue[] {
+  const data = JSON.parse(src) as { segments?: { start_ms: number; duration_ms: number; text: string }[] } | { start_ms: number; duration_ms: number; text: string }[];
+  const segs = Array.isArray(data) ? data : data.segments ?? [];
+  return segs
+    .map((g) => ({ start: g.start_ms / 1000, end: (g.start_ms + g.duration_ms) / 1000, text: g.text.replace(/\[[^\]]*\]/g, '').replace(/\s+/g, '').trim() }))
+    .filter((c) => c.text);
+}
+
+const readCues = (file: string) => (file.endsWith('.json') ? parseSegments : parseVtt)(fs.readFileSync(file, 'utf8'));
+
 const kata2hira = (s: string) => s.replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 async function main() {
@@ -57,8 +68,8 @@ async function main() {
   );
 
   const reels = specs.map((spec) => {
-    const ja = parseVtt(fs.readFileSync(path.join(base, spec.subtitles), 'utf8'));
-    const en = spec.translations ? parseVtt(fs.readFileSync(path.join(base, spec.translations), 'utf8')) : [];
+    const ja = readCues(path.join(base, spec.subtitles));
+    const en = spec.translations ? readCues(path.join(base, spec.translations)) : [];
     const lines = ja.map((cue) => {
       const tokens = tokenizer.tokenize(cue.text).map((t) => {
         const tok: { s: string; r?: string; b?: string; p?: string } = { s: t.surface_form, p: POS[t.pos] ?? t.pos };

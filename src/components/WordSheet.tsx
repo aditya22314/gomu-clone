@@ -14,12 +14,15 @@ type Props = {
   onClose: () => void;
   context?: { jp: string; en: string };
   // reading / dictionary form / part of speech from the subtitle tokenizer, for words not in the built-in dictionary
-  hint?: { reading?: string; base?: string; pos?: string };
+  // meaning/level: a meaning supplied with the word (e.g. a show's word list), used when the built-in dictionary lacks it
+  hint?: { reading?: string; base?: string; pos?: string; meaning?: string; level?: Entry['level'] };
 };
 
 export default function WordSheet({ word, saved, onSave, onRemove, onClose, context, hint }: Props) {
   const [online, setOnline] = useState<{ word: string; entry: Entry | null } | null>(null);
-  const local = word ? lookup(word) : undefined;
+  const given: Entry | undefined =
+    word && hint?.meaning ? { surface: word, reading: hint.reading ?? word, meaning: hint.meaning, level: hint.level ?? 'Other', pos: hint.pos ?? 'word' } : undefined;
+  const local = word ? lookup(word) ?? given : undefined;
   useEffect(() => {
     if (!word || local) return;
     let alive = true;

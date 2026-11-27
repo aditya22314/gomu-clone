@@ -1,0 +1,33 @@
+{
+ "shows": [
+  {"id":"naruto","name":"Naruto","jp":"ナルト","color":"#F08C00","words":[["忍者","にんじゃ","ninja","Other"],["仲間","なかま","friend, comrade","N3"],["夢","ゆめ","dream","N3"],["約束","やくそく","promise",null],["諦める","あきらめる","to give up",null],["火影","ほかげ","Hokage (village leader)","Other"]]},
+  {"id":"demon-slayer","name":"Demon Slayer","jp":"鬼滅の刃","color":"#14A38B","words":[["鬼","おに","demon, ogre","Other"],["刀","かたな","sword","Other"],["呼吸","こきゅう","breathing","N2"],["妹","いもうと","younger sister",null],["守る","まもる","to protect","N3"],["強い","つよい","strong","N5"]]},
+  {"id":"spy-family","name":"Spy x Family","jp":"スパイファミリー","color":"#E64980","words":[["家族","かぞく","family",null],["任務","にんむ","mission","N1"],["秘密","ひみつ","secret","N3"],["学校","がっこう","school","N5"],["父","ちち","(my) father",null],["平和","へいわ","peace","N3"]]},
+  {"id":"frieren","name":"Frieren","jp":"葬送のフリーレン","color":"#3D8BFD","words":[["魔法","まほう","magic","Other"],["旅","たび","journey","N3"],["勇者","ゆうしゃ","hero","Other"],["思い出","おもいで","memory","N3"],["弟子","でし","apprentice","N1"],["時間","じかん","time","N5"]]},
+  {"id":"one-piece","name":"One Piece","jp":"ワンピース","color":"#D93838","words":[["海賊","かいぞく","pirate","Other"],["船","ふね","ship","N4"],["宝","たから","treasure","N2"],["帽子","ぼうし","hat","N5"],["自由","じゆう","freedom","N3"],["仲間","なかま","crewmate, friend","N3"]]},
+  {"id":"solo-leveling","name":"Solo Leveling","jp":"俺だけレベルアップな件","color":"#8B5CF6","words":[["影","かげ","shadow","N2"],["王","おう","king","N2"],["戦う","たたかう","to fight","N2"],["弱い","よわい","weak","N5"],["命令","めいれい","order, command","N2"],["起きろ","おきろ","get up! (command)","N5"]]},
+  {"id":"haikyu","name":"Haikyu!!","jp":"ハイキュー!!","color":"#F59F00","words":[["試合","しあい","match, game",null],["練習","れんしゅう","practice",null],["飛ぶ","とぶ","to fly, to jump","N5"],["勝つ","かつ","to win",null],["負ける","まける","to lose",null],["先輩","せんぱい","senior (at school or club)","N3"]]}
+ ],
+ "clips": [
+  ["CmsXraEmC90","naruto","Partners","Crunchyroll","N3",true],
+  ["jXtExN4ln3U","spy-family","Anya is Invincible!","Crunchyroll","N4",true],
+  ["8HuAlV5uMJY","demon-slayer","Tanjiro Puts on the Mask","Crunchyroll","N3",false],
+  ["-C3Jqo7wUxE","frieren","Himmel's Wish","Crunchyroll","N3",false],
+  ["fzoQZ2dJ4fk","one-piece","Shanks Gives Luffy His Straw Hat","Crunchyroll","N3",false],
+  ["IrHTT2IEKpE","solo-leveling","Jinwoo vs the Ant King","Crunchyroll","N2",true],
+  ["qi2rByJed-E","naruto","Naruto vs Sasuke","Crunchyroll","N2",false],
+  ["L6yAQI_Zhyk","spy-family","The Slap","Crunchyroll","N4",true],
+  ["s3kYr2OVoUc","demon-slayer","Tanjiro Faces Akaza","Aniplex","N2",false],
+  ["UqgdxZgStYs","frieren","Only 10 Years","Crunchyroll","N3",false],
+  ["ep_2LNgcGxQ","one-piece","Will You Call Me Your Friend Again?","Crunchyroll","N3",false],
+  ["F32nhlbV2Us","haikyu","Haikyu!! clip","Crunchyroll","N3",false],
+  ["P6KMKOBxVoE","spy-family","Bond Training","Crunchyroll","N4",false],
+  ["98yvX9wY7J0","naruto","Night Guy","Crunchyroll","N2",false],
+  ["fYECDqIKm90","frieren","A 50-Year Promise","Crunchyroll","N3",false],
+  ["0o3bpziP6Po","one-piece","Sanji's Bento","Crunchyroll","N3",false],
+  ["-uIpCTGDX44","frieren","Not a Morning Elf","Crunchyroll","N4",false],
+  ["CoQ21gqRogU","naruto","I'm in Hell","Crunchyroll","N2",false],
+  ["nBTIaVNIYPc","one-piece","Luffy Punches Loki","Crunchyroll","N3",false],
+  ["hFuqCO4lWKk","frieren","\"Mother\"","Crunchyroll","N3",false]
+ ]
+}

@@ -59,7 +59,7 @@ export default function ProfileScreen() {
     }
     const ok = await scheduleDailyReminder(hour, minute);
     if (!ok) {
-      setNote(Platform.OS === 'web' ? 'Reminders work in the phone app, not the web preview.' : 'Notifications are turned off for Mimi in your phone settings.');
+      setNote(Platform.OS === 'web' ? 'Reminders work in the phone app, not the web preview.' : "Couldn't set a reminder. Check that notifications are on for Mimi (they don't work inside Expo Go on Android).");
       updateProfile({ reminderOn: false });
     } else setNote(`Reminder set for ${formatTime(hour, minute)} every day.`);
   };

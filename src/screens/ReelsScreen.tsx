@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
+  Image,
   KeyboardAvoidingView,
   ListViewToken as ViewToken,
   Linking,
@@ -17,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import YoutubePlayer, { getYoutubeMeta, YoutubeIframeRef } from '../components/YouTubeView';
 import WordSheet from '../components/WordSheet';
 import { hasKanji } from '../data/dictionary';
+import { SHOWS, showById } from '../data/officialClips';
 import { parseYouTubeId, Reel, ReelLine, ReelToken, REELS } from '../data/reels';
 import { toRomaji } from '../lib/romaji';
 import { useStore } from '../lib/store';
@@ -28,13 +30,30 @@ function lineText(l: ReelLine) {
   return l.tokens.map((t) => t.s).join('');
 }
 
-function ReelSubtitle({ line, saved, showFurigana, showRomaji, onTap }: { line: ReelLine; saved: Record<string, unknown>; showFurigana: boolean; showRomaji: boolean; onTap: (t: ReelToken) => void }) {
+function ReelSubtitle({
+  line,
+  saved,
+  showFurigana,
+  showRomaji,
+  onTap,
+}: {
+  line: ReelLine;
+  saved: Record<string, unknown>;
+  showFurigana: boolean;
+  showRomaji: boolean;
+  onTap: (t: ReelToken) => void;
+}) {
   return (
     <View>
       <View style={styles.subRow}>
         {line.tokens.map((t, i) => {
           const word = !!t.p && !/symbol|記号/.test(t.p);
-          if (!word) return <Text key={i} style={styles.subJp}>{t.s}</Text>;
+          if (!word)
+            return (
+              <Text key={i} style={styles.subJp}>
+                {t.s}
+              </Text>
+            );
           return (
             <Pressable key={i} onPress={() => onTap(t)} style={styles.subToken} accessibilityRole="button" accessibilityLabel={t.s}>
               {showFurigana && <Text style={styles.subFuri}>{hasKanji(t.s) && t.r ? t.r : ' '}</Text>}
@@ -75,7 +94,46 @@ function LookupBox({ onLookup }: { onLookup: (word: string) => void }) {
   );
 }
 
-function ReelCard({ reel, active, height, onRemove }: { reel: Reel; active: boolean; height: number; onRemove?: () => void }) {
+function ShowWords({ showId, saved, onTap }: { showId?: string; saved: Record<string, unknown>; onTap: (w: { w: string; r: string; en: string }) => void }) {
+  const show = showById(showId);
+  if (!show) return null;
+  return (
+    <View style={styles.words}>
+      <Text style={styles.wordsLabel}>Words you'll hear in {show.name}</Text>
+      <View style={styles.wordsRow}>
+        {show.words.map((w) => (
+          <Pressable
+            key={w.w}
+            onPress={() => onTap(w)}
+            style={[styles.wordChip, saved[w.w] ? styles.wordChipSaved : null]}
+            accessibilityRole="button"
+            accessibilityLabel={`${w.w}, ${w.en}`}
+          >
+            <Text style={styles.wordJp}>{w.w}</Text>
+            <Text style={styles.wordEn} numberOfLines={1}>
+              {w.en}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function Thumb({ videoId, height, label, onPress }: { videoId: string; height: number; label: string; onPress: () => void }) {
+  return (
+    <Pressable style={[styles.webPlayer, { height }]} onPress={onPress} accessibilityRole="link" accessibilityLabel={label}>
+      <Image source={{ uri: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      <View style={styles.thumbShade} />
+      <View style={styles.playDot}>
+        <Text style={{ color: '#fff', fontSize: 22, marginLeft: 3 }}>▶</Text>
+      </View>
+      <Text style={styles.webPlayerText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; active: boolean; height: number; onRemove?: () => void; onNext?: () => void }) {
   const { state, saveWord, removeWord, addWatchSeconds } = useStore();
   const { width } = useWindowDimensions();
   const p = state.profile;
@@ -83,6 +141,11 @@ function ReelCard({ reel, active, height, onRemove }: { reel: Reel; active: bool
   const [playing, setPlaying] = useState(false);
   const [lineIdx, setLineIdx] = useState(-1);
   const [tapped, setTapped] = useState<Tapped | null>(null);
+  const [failed, setFailed] = useState(false);
+  const show = showById(reel.show);
+  const openOnYouTube = () => {
+    void Linking.openURL(`https://www.youtube.com/watch?v=${reel.videoId}`);
+  };
   const playerW = Math.min(width, 440) - 24;
   const playerH = Math.round((playerW * 9) / 16);
 
@@ -91,10 +154,12 @@ function ReelCard({ reel, active, height, onRemove }: { reel: Reel; active: bool
   // follow the video with the subtitles
   useEffect(() => {
     if (!active || !playing || !reel.lines?.length) return;
-    const t = setInterval(async () => {
-      const now = (await player.current?.getCurrentTime().catch(() => 0)) ?? 0;
-      const i = reel.lines!.findIndex((l) => now >= l.start && now < l.end);
-      if (i !== -1) setLineIdx(i);
+    const t = setInterval(() => {
+      void (async () => {
+        const now = (await player.current?.getCurrentTime().catch(() => 0)) ?? 0;
+        const i = reel.lines!.findIndex((l) => now >= l.start && now < l.end);
+        if (i !== -1) setLineIdx(i);
+      })();
     }, 250);
     return () => clearInterval(t);
   }, [active, playing, reel.lines]);
@@ -108,36 +173,71 @@ function ReelCard({ reel, active, height, onRemove }: { reel: Reel; active: bool
   const line = reel.lines && lineIdx >= 0 ? reel.lines[lineIdx] : undefined;
   const context = (l?: ReelLine) => ({ jp: l ? lineText(l) : reel.title, en: `From “${reel.title}” · ${reel.channel} on YouTube` });
 
+  const playerView = () => {
+    if (Platform.OS === 'web') {
+      return <Thumb videoId={reel.videoId} height={playerH} label="Plays inside the phone app. Tap to watch on YouTube." onPress={openOnYouTube} />;
+    }
+    if (failed) {
+      return (
+        <View style={[styles.webPlayer, { height: playerH }]}>
+          <Text style={styles.failTitle}>This clip can't play here</Text>
+          <Text style={styles.webPlayerText}>The channel may limit it to YouTube or to some countries.</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+            <Pressable style={styles.failBtn} onPress={openOnYouTube}>
+              <Text style={styles.failBtnText}>Open on YouTube</Text>
+            </Pressable>
+            {onNext && (
+              <Pressable style={[styles.failBtn, { backgroundColor: C.accent }]} onPress={onNext}>
+                <Text style={styles.failBtnText}>Next clip</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.playerWrap}>
+        <YoutubePlayer
+          ref={player}
+          height={playerH}
+          width={playerW}
+          videoId={reel.videoId}
+          play={playing && !tapped}
+          onError={() => setFailed(true)}
+          onChangeState={(s: string) => {
+            if (s === 'playing') setPlaying(true);
+            if (s === 'paused') setPlaying(false);
+          }}
+          initialPlayerParams={{
+            cc_lang_pref: 'ja',
+            showClosedCaptions: !reel.lines?.length,
+            start: reel.start,
+            end: reel.end,
+            rel: false,
+            modestbranding: true,
+          }}
+        />
+      </View>
+    );
+  };
+
   return (
     <View style={[styles.card, { height }]}>
-      {Platform.OS === 'web' ? (
-        <Pressable style={[styles.webPlayer, { height: playerH }]} onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${reel.videoId}`)}>
-          <Text style={{ fontSize: 40 }}>▶</Text>
-          <Text style={styles.webPlayerText}>Videos play inside the phone app. Tap to open this one on YouTube.</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.playerWrap}>
-          <YoutubePlayer
-            ref={player}
-            height={playerH}
-            width={playerW}
-            videoId={reel.videoId}
-            play={playing && !tapped}
-            onChangeState={(s: string) => {
-              if (s === 'playing') setPlaying(true);
-              if (s === 'paused') setPlaying(false);
-            }}
-            initialPlayerParams={{ cc_lang_pref: 'ja', showClosedCaptions: !reel.lines?.length, start: reel.start, end: reel.end, rel: false, modestbranding: true }}
-          />
-        </View>
-      )}
+      {playerView()}
 
       <View style={styles.metaRow}>
         <Text style={[styles.badge, { backgroundColor: LEVEL_COLOR[reel.level] }]}>{reel.level === 'Other' ? 'Your video' : reel.level}</Text>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title} numberOfLines={2}>{reel.title}</Text>
-          <Pressable onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${reel.videoId}`)}>
-            <Text style={styles.channel}>▶ {reel.channel} · YouTube</Text>
+          {show && (
+            <Text style={[styles.showTag, { color: show.color }]}>
+              {show.name} · {show.jp}
+            </Text>
+          )}
+          <Text style={styles.title} numberOfLines={2}>
+            {reel.title}
+          </Text>
+          <Pressable onPress={openOnYouTube}>
+            <Text style={styles.channel}>▶ {show ? `Official clip from ${reel.channel}` : reel.channel} · YouTube</Text>
           </Pressable>
         </View>
         {onRemove && (
@@ -163,8 +263,15 @@ function ReelCard({ reel, active, height, onRemove }: { reel: Reel; active: bool
             <Text style={styles.hint}>Subtitles appear here as the video plays. Tap any word to look it up.</Text>
           )
         ) : (
-          <Text style={styles.hint}>Japanese captions are shown in the player.</Text>
+          <Text style={styles.hint}>
+            {reel.jaCaptions === false ? 'Listen closely and look up what you hear.' : 'Japanese captions show in the player when YouTube has them.'}
+          </Text>
         )}
+        <ShowWords
+          showId={reel.show}
+          saved={state.cards}
+          onTap={(w) => setTapped({ surface: w.w, hint: { reading: w.r }, context: { jp: w.w, en: `${w.en} · from “${reel.title}”, ${show?.name ?? ''}` } })}
+        />
         <LookupBox onLookup={(w) => setTapped({ surface: w, context: context(line) })} />
       </ScrollView>
 
@@ -209,11 +316,28 @@ function AddVideo({ onDone }: { onDone: () => void }) {
     <View style={styles.addBox}>
       <Text style={styles.addTitle}>Add a YouTube video</Text>
       <Text style={styles.addSub}>Paste any Japanese video or Short. It plays with Japanese captions, and you can look up and save words from it.</Text>
-      <TextInput id="add-video-url" value={url} onChangeText={(t) => { setUrl(t); setError(null); }} placeholder="https://youtube.com/shorts/…" placeholderTextColor={C.sub} style={styles.addInput} autoCapitalize="none" autoCorrect={false} onSubmitEditing={add} />
+      <TextInput
+        id="add-video-url"
+        value={url}
+        onChangeText={(t) => {
+          setUrl(t);
+          setError(null);
+        }}
+        placeholder="https://youtube.com/shorts/…"
+        placeholderTextColor={C.sub}
+        style={styles.addInput}
+        autoCapitalize="none"
+        autoCorrect={false}
+        onSubmitEditing={add}
+      />
       {error && <Text style={{ color: C.danger, marginTop: 6 }}>{error}</Text>}
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-        <Pressable style={[styles.addBtn, { backgroundColor: C.line }]} onPress={onDone}><Text style={{ fontWeight: '800', color: C.ink }}>Cancel</Text></Pressable>
-        <Pressable style={styles.addBtn} onPress={add} disabled={busy}><Text style={{ fontWeight: '800', color: '#fff' }}>{busy ? 'Adding…' : 'Add video'}</Text></Pressable>
+        <Pressable style={[styles.addBtn, { backgroundColor: C.line }]} onPress={onDone}>
+          <Text style={{ fontWeight: '800', color: C.ink }}>Cancel</Text>
+        </Pressable>
+        <Pressable style={styles.addBtn} onPress={add} disabled={busy}>
+          <Text style={{ fontWeight: '800', color: '#fff' }}>{busy ? 'Adding…' : 'Add video'}</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -224,16 +348,21 @@ export default function ReelsScreen() {
   const [height, setHeight] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [filter, setFilter] = useState<string>('all');
+  const list = useRef<FlatList<Reel & { mine?: boolean }>>(null);
 
   const reels = useMemo<(Reel & { mine?: boolean })[]>(
-    () => [
-      ...state.userReels.map((r) => ({ id: r.id, videoId: r.videoId, title: r.title, channel: 'Added by you', level: 'Other' as const, mine: true })),
-      ...REELS,
-    ],
-    [state.userReels],
+    () =>
+      (
+        [
+          ...state.userReels.map((r) => ({ id: r.id, videoId: r.videoId, title: r.title, channel: 'Added by you', level: 'Other' as const, mine: true })),
+          ...REELS,
+        ] as (Reel & { mine?: boolean })[]
+      ).filter((r) => filter === 'all' || (filter === 'mine' ? r.mine : r.show === filter)),
+    [state.userReels, filter],
   );
 
-  useEffect(() => setActiveId((cur) => (cur && reels.some((r) => r.id === cur) ? cur : reels[0]?.id ?? null)), [reels]);
+  useEffect(() => setActiveId((cur) => (cur && reels.some((r) => r.id === cur) ? cur : (reels[0]?.id ?? null))), [reels]);
 
   const onViewable = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     const first = viewableItems.find((v) => v.isViewable);
@@ -241,10 +370,16 @@ export default function ReelsScreen() {
   }).current;
 
   const renderItem = useCallback(
-    ({ item }: { item: Reel & { mine?: boolean } }) => (
-      <ReelCard reel={item} active={item.id === activeId} height={height} onRemove={item.mine ? () => removeReel(item.videoId) : undefined} />
+    ({ item, index }: { item: Reel & { mine?: boolean }; index: number }) => (
+      <ReelCard
+        reel={item}
+        active={item.id === activeId}
+        height={height}
+        onRemove={item.mine ? () => removeReel(item.videoId) : undefined}
+        onNext={index < reels.length - 1 ? () => list.current?.scrollToIndex({ index: index + 1, animated: true }) : undefined}
+      />
     ),
-    [activeId, height],
+    [activeId, height, reels.length],
   );
 
   return (
@@ -252,15 +387,30 @@ export default function ReelsScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.topBar}>
           <Text style={styles.logo}>Reels</Text>
-          <Text style={styles.topSub}>Real Japanese videos</Text>
+          <Text style={styles.topSub}>Official anime clips</Text>
           <Pressable style={styles.addTop} onPress={() => setAdding(true)} accessibilityLabel="Add a YouTube video">
             <Text style={{ color: C.ink, fontWeight: '800' }}>＋ Add video</Text>
           </Pressable>
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips} contentContainerStyle={styles.chipsRow}>
+          {[{ id: 'all', name: 'All' }, ...SHOWS, ...(state.userReels.length ? [{ id: 'mine', name: 'My videos' }] : [])].map((s) => (
+            <Pressable
+              key={s.id}
+              onPress={() => setFilter(s.id)}
+              style={[styles.chip, filter === s.id ? styles.chipOn : null]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: filter === s.id }}
+            >
+              <Text style={[styles.chipText, filter === s.id ? styles.chipTextOn : null]}>{s.name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
         {adding && <AddVideo onDone={() => setAdding(false)} />}
         <View style={{ flex: 1 }} onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
           {height > 0 && reels.length > 0 && (
             <FlatList
+              ref={list}
+              key={filter}
               data={reels}
               keyExtractor={(r) => r.id}
               renderItem={renderItem}
@@ -279,7 +429,9 @@ export default function ReelsScreen() {
             <View style={styles.empty}>
               <Text style={{ fontSize: 54 }}>🎬</Text>
               <Text style={styles.emptyTitle}>Learn from real Japanese videos</Text>
-              <Text style={styles.emptySub}>Add any YouTube video or Short in Japanese. Watch it with Japanese captions, look up the words you hear and save them to your review deck.</Text>
+              <Text style={styles.emptySub}>
+                Add any YouTube video or Short in Japanese. Watch it with Japanese captions, look up the words you hear and save them to your review deck.
+              </Text>
               <Pressable style={styles.addBtnBig} onPress={() => setAdding(true)}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>＋ Add your first video</Text>
               </Pressable>
@@ -300,7 +452,26 @@ const styles = StyleSheet.create({
   card: { paddingHorizontal: 12, paddingTop: 4 },
   playerWrap: { borderRadius: 16, overflow: 'hidden', backgroundColor: '#000', alignSelf: 'center' },
   webPlayer: { borderRadius: 16, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', padding: 20, gap: 8 },
-  webPlayerText: { color: 'rgba(255,255,255,0.75)', textAlign: 'center', fontSize: 13 },
+  webPlayerText: { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: 13, fontWeight: '600' },
+  thumbShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
+  playDot: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,0,0,0.9)', alignItems: 'center', justifyContent: 'center' },
+  failTitle: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  failBtn: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  failBtnText: { color: '#fff', fontWeight: '800' },
+  showTag: { fontSize: 12, fontWeight: '800', marginBottom: 2 },
+  chips: { flexGrow: 0 },
+  chipsRow: { paddingHorizontal: 12, gap: 8, paddingBottom: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)' },
+  chipOn: { backgroundColor: '#fff' },
+  chipText: { color: 'rgba(255,255,255,0.8)', fontWeight: '700', fontSize: 13 },
+  chipTextOn: { color: C.ink },
+  words: { marginTop: 16, gap: 8 },
+  wordsLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
+  wordsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  wordChip: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, maxWidth: 150 },
+  wordChipSaved: { borderWidth: 1, borderColor: '#FFB199' },
+  wordJp: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  wordEn: { color: 'rgba(255,255,255,0.6)', fontSize: 11 },
   metaRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 12 },
   badge: { color: '#fff', fontWeight: '800', fontSize: 11, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, overflow: 'hidden', marginTop: 2 },
   title: { color: '#fff', fontWeight: '800', fontSize: 16 },

@@ -30,6 +30,13 @@ type Tapped = {
   context: { jp: string; en: string };
 };
 
+// The line being spoken at `now`: the latest one that has started. Auto-generated captions
+// overlap (each line stays up until the next one ends), so the first match would lag behind.
+export function lineAt(lines: ReelLine[], now: number): number {
+  for (let i = lines.length - 1; i >= 0; i--) if (lines[i].start <= now) return now < lines[i].end + 2 ? i : -1;
+  return -1;
+}
+
 function lineText(l: ReelLine) {
   return l.tokens.map((t) => t.s).join('');
 }
@@ -166,8 +173,8 @@ function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; acti
     const t = setInterval(() => {
       void (async () => {
         const now = (await player.current?.getCurrentTime().catch(() => 0)) ?? 0;
-        const i = reel.lines!.findIndex((l) => now >= l.start && now < l.end);
-        if (i !== -1) setLineIdx(i);
+        const i = lineAt(reel.lines!, now);
+        setLineIdx(i);
       })();
     }, 250);
     return () => clearInterval(t);

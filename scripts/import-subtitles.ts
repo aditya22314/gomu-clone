@@ -85,6 +85,8 @@ async function main() {
 
   const reels = specs.map((spec) => {
     const ja = readCues(path.join(base, spec.subtitles));
+    // auto-generated captions overlap; end each line when the next one starts
+    for (let i = 0; i < ja.length - 1; i++) ja[i].end = Math.min(ja[i].end, ja[i + 1].start);
     const en = spec.translations ? readCues(path.join(base, spec.translations), ' ') : [];
     const lines = ja.map((cue) => {
       const tokens = tokenizer.tokenize(cue.text).map((t) => {

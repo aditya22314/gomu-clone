@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import YoutubePlayer, { getYoutubeMeta, YoutubeIframeRef } from '../components/YouTubeView';
 import WordSheet from '../components/WordSheet';
 import { hasKanji } from '../data/dictionary';
-import { SHOWS, ShowWord, showById } from '../data/officialClips';
+import { Show, SHOWS, ShowWord, showById } from '../data/officialClips';
 import { parseYouTubeId, Reel, ReelLine, ReelToken, REELS } from '../data/reels';
 import { toRomaji } from '../lib/romaji';
 import { useStore } from '../lib/store';
@@ -124,9 +124,14 @@ function ShowWords({ showId, saved, onTap }: { showId?: string; saved: Record<st
   );
 }
 
-function Thumb({ videoId, height, label, onPress }: { videoId: string; height: number; label: string; onPress: () => void }) {
+// The browser version can't embed YouTube, so it shows the clip's show and title (and the
+// YouTube thumbnail where images from YouTube are allowed) with a link to watch it there.
+function Thumb({ videoId, show, title, height, onPress }: { videoId: string; show?: Show; title: string; height: number; onPress: () => void }) {
+  const label = 'Plays inside the phone app. Tap to watch on YouTube.';
   return (
-    <Pressable style={[styles.webPlayer, { height }]} onPress={onPress} accessibilityRole="link" accessibilityLabel={label}>
+    <Pressable style={[styles.webPlayer, { height, backgroundColor: show?.color ?? '#000' }]} onPress={onPress} accessibilityRole="link" accessibilityLabel={label}>
+      {show && <Text style={styles.thumbJp}>{show.jp}</Text>}
+      {show && <Text style={styles.thumbTitle} numberOfLines={1}>{title}</Text>}
       <Image source={{ uri: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` }} style={StyleSheet.absoluteFill} resizeMode="cover" />
       <View style={styles.thumbShade} />
       <View style={styles.playDot}>
@@ -179,7 +184,7 @@ function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; acti
 
   const playerView = () => {
     if (Platform.OS === 'web') {
-      return <Thumb videoId={reel.videoId} height={playerH} label="Plays inside the phone app. Tap to watch on YouTube." onPress={openOnYouTube} />;
+      return <Thumb videoId={reel.videoId} show={show} title={reel.title} height={playerH} onPress={openOnYouTube} />;
     }
     if (failed) {
       return (
@@ -464,6 +469,8 @@ const styles = StyleSheet.create({
   webPlayer: { borderRadius: 16, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', padding: 20, gap: 8 },
   webPlayerText: { color: 'rgba(255,255,255,0.85)', textAlign: 'center', fontSize: 13, fontWeight: '600' },
   thumbShade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)' },
+  thumbJp: { position: 'absolute', top: 14, left: 16, right: 16, color: 'rgba(255,255,255,0.95)', fontSize: 26, fontWeight: '900' },
+  thumbTitle: { position: 'absolute', bottom: 14, left: 16, right: 16, color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '700' },
   playDot: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,0,0,0.9)', alignItems: 'center', justifyContent: 'center' },
   failTitle: { color: '#fff', fontWeight: '800', fontSize: 16 },
   failBtn: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },

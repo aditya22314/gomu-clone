@@ -1,25 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient, Path, Polygon, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient, Path, Polygon, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { AnimeCharacter, CastMember } from './AnimeCharacter';
 
-// Original illustrations for scenes, drawn in code: a backdrop plus "chibi" characters
-// whose mouths move while their line is being spoken.
+// Original anime-style illustrations for scenes, drawn in code: a painted backdrop with sky,
+// clouds and light, a slow camera drift, and anime characters who blink, breathe and lip-sync.
 
 export type Backdrop =
   | 'street-morning' | 'cafe' | 'studio-dusk' | 'rain-station' | 'forest' | 'classroom' | 'mountain'
   | 'city-dusk' | 'dojo' | 'platform' | 'office' | 'meeting' | 'rooftop-night' | 'mansion' | 'skyline' | 'newsroom';
 
-export type HairStyle = 'short' | 'bob' | 'long' | 'ponytail' | 'spiky' | 'bun' | 'neat';
-
-export type CastMember = {
-  name: string;
-  hair: HairStyle;
-  hairColor: string;
-  shirt: string;
-  skin?: string;
-  fox?: boolean;
-  glasses?: boolean;
-};
+export type { CastMember, HairStyle } from './AnimeCharacter';
 
 const SKY: Record<Backdrop, [string, string]> = {
   'street-morning': ['#9ED8FF', '#FFE2C6'],
@@ -275,86 +266,6 @@ function BackdropArt({ kind }: { kind: Backdrop }) {
   }
 }
 
-function Hair({ style, color }: { style: HairStyle; color: string }) {
-  switch (style) {
-    case 'short':
-      return <Path d="M -34 -6 Q -36 -44 0 -46 Q 36 -44 34 -6 Q 22 -26 0 -28 Q -22 -26 -34 -6 Z" fill={color} />;
-    case 'bob':
-      return <Path d="M -38 18 Q -44 -46 0 -46 Q 44 -46 38 18 L 28 18 Q 30 -18 0 -24 Q -30 -18 -28 18 Z" fill={color} />;
-    case 'long':
-      return <Path d="M -38 60 Q -48 -46 0 -46 Q 48 -46 38 60 L 26 60 Q 30 -16 0 -24 Q -30 -16 -26 60 Z" fill={color} />;
-    case 'ponytail':
-      return (
-        <G>
-          <Path d="M 30 -30 Q 62 -20 50 30 Q 44 0 30 -12 Z" fill={color} />
-          <Path d="M -34 -4 Q -38 -46 0 -46 Q 38 -46 34 -4 Q 20 -28 0 -26 Q -20 -28 -34 -4 Z" fill={color} />
-        </G>
-      );
-    case 'spiky':
-      return <Path d="M -36 -4 L -40 -30 L -22 -36 L -18 -54 L 0 -40 L 14 -56 L 20 -38 L 40 -40 L 36 -4 Q 20 -24 0 -26 Q -20 -24 -36 -4 Z" fill={color} />;
-    case 'bun':
-      return (
-        <G>
-          <Circle cx={0} cy={-50} r={14} fill={color} />
-          <Path d="M -34 -4 Q -36 -44 0 -44 Q 36 -44 34 -4 Q 20 -26 0 -24 Q -20 -26 -34 -4 Z" fill={color} />
-        </G>
-      );
-    case 'neat':
-      return <Path d="M -34 -8 Q -34 -44 0 -44 Q 34 -44 34 -8 Q 30 -30 -6 -30 Q -26 -28 -34 -8 Z" fill={color} />;
-  }
-}
-
-function Character({ c, talking, flip }: { c: CastMember; talking: boolean; flip: boolean }) {
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!talking) {
-      setOpen(false);
-      return;
-    }
-    const t = setInterval(() => setOpen((o) => !o), 170);
-    return () => clearInterval(t);
-  }, [talking]);
-
-  const skin = c.fox ? '#F28C38' : c.skin ?? '#FFE0C7';
-  return (
-    <Svg width={140} height={170} viewBox="-70 -80 140 170">
-      <G transform={flip ? 'scale(-1,1)' : undefined}>
-        {/* body */}
-        <Path d="M -44 90 Q -44 46 0 44 Q 44 46 44 90 Z" fill={c.shirt} />
-        <Path d="M -10 44 L 0 58 L 10 44 Z" fill="#FFFFFF" opacity={0.9} />
-        {/* head */}
-        {c.fox && (
-          <G>
-            <Polygon points="-34,-20 -26,-62 -6,-34" fill="#F28C38" />
-            <Polygon points="34,-20 26,-62 6,-34" fill="#F28C38" />
-            <Polygon points="-28,-26 -24,-50 -12,-34" fill="#FFF1E0" />
-            <Polygon points="28,-26 24,-50 12,-34" fill="#FFF1E0" />
-          </G>
-        )}
-        <Ellipse cx={0} cy={0} rx={36} ry={40} fill={skin} />
-        {c.fox && <Path d="M -26 12 Q 0 40 26 12 Q 0 24 -26 12 Z" fill="#FFF1E0" />}
-        {!c.fox && <Hair style={c.hair} color={c.hairColor} />}
-        {/* eyes */}
-        <Ellipse cx={-13} cy={2} rx={5} ry={7} fill="#2A2238" />
-        <Ellipse cx={13} cy={2} rx={5} ry={7} fill="#2A2238" />
-        <Circle cx={-11} cy={-1} r={1.8} fill="#FFFFFF" />
-        <Circle cx={15} cy={-1} r={1.8} fill="#FFFFFF" />
-        {c.glasses && (
-          <G stroke="#2A2238" strokeWidth={2} fill="none">
-            <Circle cx={-13} cy={2} r={10} />
-            <Circle cx={13} cy={2} r={10} />
-            <Line x1={-3} y1={2} x2={3} y2={2} />
-          </G>
-        )}
-        <Ellipse cx={-22} cy={14} rx={6} ry={3} fill="#FF9AA2" opacity={0.6} />
-        <Ellipse cx={22} cy={14} rx={6} ry={3} fill="#FF9AA2" opacity={0.6} />
-        {c.fox && <Circle cx={0} cy={14} r={3.5} fill="#2A2238" />}
-        {open ? <Ellipse cx={0} cy={22} rx={6} ry={5} fill="#8A2E3B" /> : <Path d="M -6 21 Q 0 25 6 21" stroke="#8A2E3B" strokeWidth={2.4} fill="none" strokeLinecap="round" />}
-      </G>
-    </Svg>
-  );
-}
-
 function Rain() {
   const y = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -375,50 +286,227 @@ function Rain() {
   );
 }
 
+type Mood = 'day' | 'dusk' | 'night' | 'indoor';
+
+const MOOD: Record<Backdrop, Mood> = {
+  'street-morning': 'day',
+  cafe: 'indoor',
+  'studio-dusk': 'dusk',
+  'rain-station': 'night',
+  forest: 'day',
+  classroom: 'indoor',
+  mountain: 'day',
+  'city-dusk': 'dusk',
+  dojo: 'indoor',
+  platform: 'day',
+  office: 'indoor',
+  meeting: 'indoor',
+  'rooftop-night': 'night',
+  mansion: 'night',
+  skyline: 'day',
+  newsroom: 'indoor',
+};
+
+// Colour grade laid over the whole picture, like the lighting pass in an anime background.
+const GRADE: Record<Mood, { top: string; bottom: string; opacity: number }> = {
+  day: { top: '#FFF6D8', bottom: '#5A8BD6', opacity: 0.16 },
+  dusk: { top: '#FFB27A', bottom: '#5B2A6E', opacity: 0.26 },
+  night: { top: '#3A4C9A', bottom: '#0A0E24', opacity: 0.32 },
+  indoor: { top: '#FFE7C2', bottom: '#6B4A3A', opacity: 0.18 },
+};
+
+function Cloud({ x, y, s, tint }: { x: number; y: number; s: number; tint: string }) {
+  return (
+    <G transform={`translate(${x} ${y}) scale(${s})`}>
+      <Circle cx={-30} cy={6} r={12} fill={tint} />
+      <Circle cx={-14} cy={-4} r={17} fill="#FFFFFF" />
+      <Circle cx={6} cy={-12} r={21} fill="#FFFFFF" />
+      <Circle cx={26} cy={-2} r={15} fill="#FFFFFF" />
+      <Circle cx={40} cy={7} r={10} fill={tint} />
+      <Path d="M -40 10 Q -30 2 -18 8 Q -4 0 8 8 Q 22 2 34 8 Q 44 6 48 12 Q 4 18 -40 10 Z" fill={tint} />
+    </G>
+  );
+}
+
+// Things drawn behind the set: clouds for outdoor day and dusk scenes, stars at night.
+function Sky({ mood }: { mood: Mood }) {
+  if (mood === 'day' || mood === 'dusk') {
+    const tint = mood === 'day' ? '#D6E6FA' : '#F3B6A6';
+    return (
+      <G opacity={mood === 'day' ? 0.95 : 0.8}>
+        <Cloud x={70} y={44} s={0.9} tint={tint} />
+        <Cloud x={250} y={30} s={1.2} tint={tint} />
+        <Cloud x={370} y={70} s={0.7} tint={tint} />
+      </G>
+    );
+  }
+  if (mood === 'night') {
+    const stars = [[24, 20], [64, 54], [110, 18], [150, 64], [196, 28], [236, 52], [282, 16], [330, 44], [372, 22], [90, 90], [214, 92], [356, 96]];
+    return (
+      <G>
+        {stars.map(([x, y]) => (
+          <Circle key={`${x}-${y}`} cx={x} cy={y} r={(x + y) % 3 === 0 ? 1.8 : 1.1} fill="#FFFFFF" opacity={0.85} />
+        ))}
+      </G>
+    );
+  }
+  return null;
+}
+
+// Light laid over the set: god rays by day and indoors, a warm glow at dusk, a cool one at night.
+function Light({ mood, gid }: { mood: Mood; gid: string }) {
+  const g = GRADE[mood];
+  return (
+    <G>
+      <Rect x={0} y={0} width={400} height={300} fill={`url(#${gid}-grade)`} opacity={g.opacity} />
+      {mood === 'dusk' && <Ellipse cx={320} cy={120} rx={180} ry={120} fill={`url(#${gid}-glow)`} />}
+      <Rect x={0} y={0} width={400} height={300} fill={`url(#${gid}-vignette)`} />
+    </G>
+  );
+}
+
+// Floating motes: petals by day, warm dust indoors and at dusk, fireflies of light at night.
+function Particles({ mood }: { mood: Mood }) {
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.timing(t, { toValue: 1, duration: 9000, easing: Easing.linear, useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  const color = mood === 'day' ? '#FFC7D6' : mood === 'night' ? '#FFF3B0' : '#FFE6B8';
+  const motes = [[30, 40], [90, 120], [150, 60], [210, 150], [270, 30], [330, 110], [380, 70], [60, 190], [240, 210], [350, 200]];
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          transform: [
+            { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [-30, 30] }) },
+            { translateX: t.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 14, 0] }) },
+          ],
+        },
+      ]}
+    >
+      <Svg width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+        {motes.map(([x, y], i) =>
+          mood === 'day' ? (
+            <Ellipse key={`${x}-${y}`} cx={x} cy={y} rx={3.4} ry={2} fill={color} opacity={0.85} transform={`rotate(${i * 37} ${x} ${y})`} />
+          ) : (
+            <Circle key={`${x}-${y}`} cx={x} cy={y} r={i % 3 === 0 ? 2.2 : 1.4} fill={color} opacity={0.7} />
+          ),
+        )}
+      </Svg>
+    </Animated.View>
+  );
+}
+
 export default function SceneArt({
   backdrop,
   cast,
   speaker,
   talking,
   rain,
-}: {
+}: Readonly<{
   backdrop: Backdrop;
   cast: CastMember[];
   speaker?: string;
   talking: boolean;
   rain?: boolean;
-}) {
+}>) {
   const [top, bottom] = SKY[backdrop];
+  const mood = MOOD[backdrop];
+  const grade = GRADE[mood];
   const id = `sky-${backdrop}`;
+  // slow camera drift so the still background feels alive
+  const cam = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(cam, { toValue: 1, duration: 12000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(cam, { toValue: 0, duration: 12000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const speakerIdx = cast.findIndex((c) => c.name === speaker);
   return (
     <View style={styles.wrap}>
-      <Svg width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" style={StyleSheet.absoluteFill}>
-        <Defs>
-          <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={top} />
-            <Stop offset="1" stopColor={bottom} />
-          </LinearGradient>
-        </Defs>
-        <Rect x={0} y={0} width={400} height={300} fill={`url(#${id})`} />
-        <BackdropArt kind={backdrop} />
-      </Svg>
+      <Animated.View
+        style={[
+          StyleSheet.absoluteFill,
+          {
+            transform: [
+              { scale: cam.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1.1] }) },
+              { translateX: cam.interpolate({ inputRange: [0, 1], outputRange: [-6, 6] }) },
+            ],
+          },
+        ]}
+      >
+        <Svg width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+          <Defs>
+            <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={top} />
+              <Stop offset="1" stopColor={bottom} />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width={400} height={300} fill={`url(#${id})`} />
+          <Sky mood={mood} />
+          <BackdropArt kind={backdrop} />
+          {(mood === 'day' || mood === 'indoor') && (
+            <G opacity={mood === 'day' ? 0.2 : 0.14}>
+              <Polygon points="300,-10 360,-10 210,300 130,300" fill="#FFFFFF" />
+              <Polygon points="372,-10 396,-10 290,300 256,300" fill="#FFFFFF" />
+              <Polygon points="240,-10 262,-10 96,300 70,300" fill="#FFFFFF" opacity={0.6} />
+            </G>
+          )}
+        </Svg>
+      </Animated.View>
+      <Particles mood={mood} />
       {rain && <Rain />}
       <View style={styles.castRow} pointerEvents="none">
         {cast.map((c, i) => {
-          const isSpeaker = c.name === speaker;
+          const isSpeaker = i === speakerIdx;
+          const dim = speakerIdx >= 0 && !isSpeaker && cast.length > 1;
           return (
-            <View key={c.name} style={[styles.actor, { opacity: speaker && !isSpeaker && cast.length > 1 ? 0.8 : 1, transform: [{ scale: isSpeaker ? 1.06 : 1 }] }]}>
-              <Character c={c} talking={talking && isSpeaker} flip={cast.length > 1 && i === cast.length - 1} />
+            <View
+              key={c.name}
+              style={{
+                marginHorizontal: cast.length > 1 ? -14 : 0,
+                zIndex: isSpeaker ? 2 : 1,
+                transform: [{ scale: isSpeaker ? 1.06 : 0.97 }, { translateY: dim ? 6 : 0 }],
+              }}
+            >
+              <AnimeCharacter c={c} talking={talking && isSpeaker} flip={cast.length > 1 && i === cast.length - 1} />
             </View>
           );
         })}
       </View>
+      {/* lighting pass over everything, so characters sit in the same light as the set */}
+      <Svg pointerEvents="none" width="100%" height="100%" viewBox="0 0 400 300" preserveAspectRatio="none" style={StyleSheet.absoluteFill}>
+        <Defs>
+          <LinearGradient id={`${id}-grade`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={grade.top} />
+            <Stop offset="1" stopColor={grade.bottom} />
+          </LinearGradient>
+          <RadialGradient id={`${id}-glow`} cx="0.5" cy="0.5" r="0.5">
+            <Stop offset="0" stopColor="#FFB070" stopOpacity={0.45} />
+            <Stop offset="1" stopColor="#FFB070" stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id={`${id}-vignette`} cx="0.5" cy="0.45" r="0.75">
+            <Stop offset="0.55" stopColor="#000000" stopOpacity={0} />
+            <Stop offset="1" stopColor="#000000" stopOpacity={mood === 'night' ? 0.55 : 0.35} />
+          </RadialGradient>
+        </Defs>
+        <Light mood={mood} gid={id} />
+      </Svg>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, overflow: 'hidden', borderRadius: 20 },
-  castRow: { position: 'absolute', left: 0, right: 0, bottom: -6, flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 18 },
-  actor: {},
+  castRow: { position: 'absolute', left: 0, right: 0, bottom: -40, flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end' },
 });

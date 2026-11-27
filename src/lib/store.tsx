@@ -142,6 +142,8 @@ type Actions = {
   markClipWatched: (clipId: string) => void;
   recordLevelQuiz: (level: Level, score: number) => void;
   resetAll: () => Promise<void>;
+  exportData: () => string;
+  importData: (json: string) => { ok: true; words: number } | { ok: false; error: string };
 };
 
 type Ctx = { state: State; loaded: boolean } & Actions;
@@ -154,7 +156,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    (async () => {
+    void (async () => {
       try {
         const raw = await AsyncStorage.getItem(KEY);
         if (raw) {
@@ -176,6 +178,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem(KEY, JSON.stringify(state)).catch(() => {});
     }, 300);
   }, [state, loaded]);
+
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   const update = useCallback((fn: (s: State) => State) => setState((s) => withAchievements(fn(s))), []);
 
@@ -217,6 +222,28 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       resetAll: async () => {
         await AsyncStorage.removeItem(KEY).catch(() => {});
         setState(INITIAL);
+      },
+      exportData: () => JSON.stringify({ app: 'mimi', exportedAt: new Date().toISOString(), state: stateRef.current }),
+      importData: (json) => {
+        let parsed: { app?: string; state?: State };
+        try {
+          parsed = JSON.parse(json.trim());
+        } catch {
+          return { ok: false, error: "That doesn't look like a Mimi backup. Paste the whole text you exported." };
+        }
+        const incoming = parsed?.state;
+        if (parsed?.app !== 'mimi' || !incoming || typeof incoming.cards !== 'object') {
+          return { ok: false, error: "That doesn't look like a Mimi backup. Paste the whole text you exported." };
+        }
+        Object.values(incoming.cards).forEach((c) => c.entry && registerEntry(c.entry));
+        setState({
+          ...INITIAL,
+          ...incoming,
+          onboarded: true,
+          profile: { ...DEFAULT_PROFILE, ...incoming.profile },
+          userReels: incoming.userReels ?? [],
+        });
+        return { ok: true, words: Object.keys(incoming.cards).length };
       },
     }),
     [update],

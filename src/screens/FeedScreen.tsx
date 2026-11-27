@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, View, ListViewToken as ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +7,7 @@ import Subtitle from '../components/Subtitle';
 import WordSheet from '../components/WordSheet';
 import { CATEGORIES, Category, Clip, CLIPS } from '../data/clips';
 import { LEVELS } from '../data/dictionary';
+import { success } from '../lib/haptics';
 import { speakJapanese, stopSpeaking } from '../lib/speech';
 import { useStore } from '../lib/store';
 import { C, LEVEL_COLOR } from '../lib/theme';
@@ -38,7 +40,7 @@ function ClipCard({ clip, active, height }: { clip: Clip; active: boolean; heigh
     if (!playing || !active || word) return;
     const myGen = ++gen.current;
     const line = clip.lines[lineIdx];
-    speakJapanese(line.jp.replace(/ /g, ''), {
+    void speakJapanese(line.jp.replace(/ /g, ''), {
       slow: p.slowAudio,
       voice: line.voice,
       onDone: () => {
@@ -82,6 +84,8 @@ function ClipCard({ clip, active, height }: { clip: Clip; active: boolean; heigh
   };
 
   const sel = word ? clip.lines[word.line] : undefined;
+  const seen = state.watched.includes(clip.id);
+  const shownLine = playing || finished ? lineIdx : -1;
 
   return (
     <View style={[styles.card, { height, backgroundColor: clip.color }]}>
@@ -96,12 +100,23 @@ function ClipCard({ clip, active, height }: { clip: Clip; active: boolean; heigh
         {(playing || finished) && (
           <Text style={styles.speaker}>{clip.lines[lineIdx].speaker}</Text>
         )}
+        <View style={styles.dots} accessibilityLabel={`Line ${Math.max(1, shownLine + 1)} of ${clip.lines.length}`}>
+          {clip.lines.map((l, i) => (
+            <View key={`${l.speaker}:${l.jp}`} style={[styles.dot, i <= shownLine && styles.dotOn]} />
+          ))}
+        </View>
       </View>
 
       <View style={styles.meta}>
         <Text style={[styles.badge, { backgroundColor: LEVEL_COLOR[clip.level] }]}>{clip.level}</Text>
         <Text style={styles.badgeGhost}>{CATEGORIES.find((c) => c.key === clip.category)?.jp}</Text>
         <Text style={styles.title} numberOfLines={1}>{clip.title}</Text>
+        {seen && (
+          <View style={styles.seen} accessibilityLabel="Watched">
+            <Ionicons name="checkmark-circle" size={14} color="#7CE0C3" />
+            <Text style={styles.seenText}>Watched</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView style={styles.subs} contentContainerStyle={{ paddingBottom: 8 }}>
@@ -124,20 +139,21 @@ function ClipCard({ clip, active, height }: { clip: Clip; active: boolean; heigh
 
       <View style={styles.controls}>
         <Pressable style={styles.ctrl} onPress={() => replayLine(Math.max(0, lineIdx - 1))} accessibilityLabel="Previous line">
-          <Text style={styles.ctrlText}>⏮</Text>
+          <Ionicons name="play-skip-back" size={20} color="#fff" />
         </Pressable>
-        <Pressable style={[styles.ctrl, styles.ctrlMain]} onPress={togglePlay} accessibilityLabel={playing ? 'Pause' : 'Play'}>
-          <Text style={[styles.ctrlText, { fontSize: 22 }]}>{finished ? '↻' : playing ? '❚❚' : '▶'}</Text>
+        <Pressable style={[styles.ctrl, styles.ctrlMain]} onPress={togglePlay} accessibilityLabel={finished ? 'Replay scene' : playing ? 'Pause' : 'Play'}>
+          <Ionicons name={finished ? 'refresh' : playing ? 'pause' : 'play'} size={28} color={C.ink} style={!playing && !finished ? { marginLeft: 3 } : undefined} />
         </Pressable>
         <Pressable style={styles.ctrl} onPress={() => replayLine(lineIdx)} accessibilityLabel="Repeat line">
-          <Text style={styles.ctrlText}>🔁</Text>
+          <Ionicons name="repeat" size={22} color="#fff" />
         </Pressable>
         <Pressable
-          style={[styles.ctrl, p.slowAudio && { backgroundColor: 'rgba(255,255,255,0.4)' }]}
+          style={[styles.ctrl, p.slowAudio && styles.ctrlOn]}
           onPress={() => updateProfile({ slowAudio: !p.slowAudio })}
           accessibilityLabel="Toggle slow audio"
+          accessibilityState={{ selected: p.slowAudio }}
         >
-          <Text style={styles.ctrlText}>🐢</Text>
+          <Text style={[styles.ctrlText, p.slowAudio && { color: C.ink }]}>0.7×</Text>
         </Pressable>
       </View>
       <Text style={styles.hint}>Tap a word to look it up · long-press a line to replay it · swipe up for the next scene</Text>
@@ -146,7 +162,11 @@ function ClipCard({ clip, active, height }: { clip: Clip; active: boolean; heigh
         word={word?.surface ?? null}
         saved={!!(word && state.cards[word.surface])}
         context={sel ? { jp: sel.jp, en: sel.en } : undefined}
-        onSave={() => word && sel && saveWord(word.surface, clip.id, sel.jp, sel.en)}
+        onSave={() => {
+          if (!word || !sel) return;
+          success();
+          saveWord(word.surface, clip.id, sel.jp, sel.en);
+        }}
         onRemove={() => word && removeWord(word.surface)}
         onClose={() => setWord(null)}
       />
@@ -244,7 +264,13 @@ const styles = StyleSheet.create({
   subs: { flexGrow: 0, maxHeight: '46%' },
   controls: { flexDirection: 'row', justifyContent: 'center', gap: 14, marginTop: 8 },
   ctrl: { width: 46, height: 46, borderRadius: 23, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  ctrlMain: { width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(255,255,255,0.3)' },
-  ctrlText: { color: '#fff', fontSize: 18 },
+  ctrlMain: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#fff' },
+  ctrlOn: { backgroundColor: '#fff' },
+  ctrlText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  dots: { position: 'absolute', bottom: 8, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 4 },
+  dot: { width: 14, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)' },
+  dotOn: { backgroundColor: '#fff' },
+  seen: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  seenText: { color: '#7CE0C3', fontSize: 11, fontWeight: '700' },
   hint: { color: 'rgba(255,255,255,0.55)', fontSize: 11, textAlign: 'center', marginTop: 8 },
 });

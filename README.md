@@ -14,11 +14,13 @@ No ads, no account, no tracking. Everything is stored on the device.
 - **Smart subtitles.** Furigana above kanji, romaji and English under each line. Each one can be turned off.
 - **Tap any word.** A word card shows the reading, romaji, meaning, part of speech, dictionary form, JLPT level and the line you heard it in, with audio and a Jisho.org link.
 - **Save words.** One tap saves a word with its source line.
-- **Spaced repetition review.** An SM-2 style scheduler with Again / Hard / Good / Easy. The Words tab shows what's due, new today and when each word comes back.
-- **Quizzes.** A saved-word quiz (meaning, reading and listening questions, which also update the review schedule) and a level quiz for each JLPT level. Score 80% or more to be offered the next level.
-- **Progress.** Day streak, daily goal in minutes, minutes per day this week, totals and badges.
+- **Spaced repetition review.** An SM-2 style scheduler with Again / Hard / Good / Easy. Each button shows when the word will come back, and words you miss come round again before the session ends. The Words tab shows what's due and what's mastered (scheduled 3+ weeks out), with search and a level filter.
+- **Quizzes.** A saved-word quiz (meaning, reading, listening and fill-the-gap questions built from the line you saved the word in, which also update the review schedule, with a recap of missed words) and a level quiz for each JLPT level. Score 80% or more to be offered the next level.
+- **Progress.** Day streak and best streak, daily goal in minutes, minutes per day this week, a 12-week activity calendar, saved words by JLPT level, totals and badges. A banner pops up when you earn a badge.
 - **Daily reminder.** One local notification a day at a time you choose.
 - **Onboarding.** Level, reasons for learning, hardest areas, daily goal and reminder.
+- **Backup and restore.** Profile > Backup exports everything as text (share sheet on phones, clipboard on the web) and restores it on another device.
+- **Haptics.** Light touch feedback when you save a word, grade a review or answer a quiz question (phones only).
 - **Delete everything.** Profile > Danger zone wipes all data on the device after a second confirmation.
 
 ## Run it
@@ -52,7 +54,7 @@ Words in reels that aren't in the built-in dictionary are looked up on Jisho.org
 
 ## Not included yet
 
-- Accounts and cloud sync (needs a backend such as Supabase)
+- Accounts and automatic cloud sync (needs a backend such as Supabase; use Backup to move between devices for now)
 - A starter set of curated reels with timed subtitles
 
 ## Licence

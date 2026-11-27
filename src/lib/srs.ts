@@ -53,3 +53,21 @@ export function describeDue(card: Card, now = Date.now()): string {
   if (hours < 24) return `In ${hours}h`;
   return `In ${Math.round(hours / 24)}d`;
 }
+
+// A card counts as "mastered" once it is scheduled three weeks or more ahead.
+export const MASTERED_DAYS = 21;
+export function isMastered(card: Card) {
+  return card.interval >= MASTERED_DAYS;
+}
+
+// Short label for how long until a card comes back, used on the grade buttons.
+export function formatGap(card: Card, now = Date.now()): string {
+  const mins = Math.max(1, Math.round((card.due - now) / 60000));
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days}d`;
+  const months = Math.round(days / 30);
+  return months < 12 ? `${months}mo` : `${(days / 365).toFixed(1)}y`;
+}

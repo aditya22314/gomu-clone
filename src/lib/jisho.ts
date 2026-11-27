@@ -16,7 +16,7 @@ const pending: Record<string, Promise<Entry | null>> = {};
 function levelFrom(tags: string[]): Level | 'Other' {
   const levels = tags.map((t) => t.replace('jlpt-', '').toUpperCase()).filter((t) => /^N[1-5]$/.test(t)) as Level[];
   // jisho lists the easiest level first when there are several
-  return levels.sort().reverse()[0] ?? 'Other';
+  return [...levels].sort((a, b) => b.localeCompare(a))[0] ?? 'Other';
 }
 
 export function lookupOnline(surface: string, hint?: { reading?: string; base?: string; pos?: string }): Promise<Entry | null> {

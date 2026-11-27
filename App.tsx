@@ -6,6 +6,7 @@ import * as Notifications from 'expo-notifications';
 import React from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import BadgeToast from './src/components/BadgeToast';
 import { isDue } from './src/lib/srs';
 import { StoreProvider, useStore } from './src/lib/store';
 import { C } from './src/lib/theme';
@@ -70,6 +71,7 @@ export default function App() {
       <StoreProvider>
         <StatusBar style="auto" />
         <Root />
+        <BadgeToast />
       </StoreProvider>
     </SafeAreaProvider>
   );

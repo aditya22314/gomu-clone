@@ -8,7 +8,7 @@ No ads, no account, no tracking. Everything is stored on the device.
 
 ## Features
 
-- **Scene feed.** A vertical, swipeable feed of 50 short dialogues in four styles (anime, drama, movie, podcast), from N5 to N1, each with its own illustrated backdrop and animated characters whose mouths move while they speak. Filter by your level, all levels, or style.
+- **Scene feed.** A vertical, swipeable feed of 50 short dialogues in four styles (anime, drama, movie, podcast), from N5 to N1, each with its own painted backdrop (sky, clouds, light rays, floating petals or fireflies, a slow camera drift) and anime-style characters with glossy eyes and layered hair who blink, breathe and lip-sync while they speak. Filter by your level, all levels, or style.
 - **Reels.** Real Japanese YouTube videos played through YouTube's official embedded player with Japanese captions. Add any video or Short by pasting its link, look up words you hear (Jisho.org), and save them with the video as context. Curated reels with timed, tap-to-learn subtitles can be added with `scripts/import-subtitles.ts`.
 - **Japanese audio.** Each scene is read aloud line by line with the phone's built-in Japanese voice. Pause, repeat a line, go back, or switch to slow audio.
 - **Smart subtitles.** Furigana above kanji, romaji and English under each line. Each one can be turned off.

@@ -46,12 +46,24 @@ export function parseVtt(src: string): Cue[] {
   return cues;
 }
 
+// Removes caption tags such as [音楽] or [Music].
+function dropTags(text: string): string {
+  let out = '';
+  let depth = 0;
+  for (const ch of text) {
+    if (ch === '[') depth++;
+    else if (ch === ']') depth = Math.max(0, depth - 1);
+    else if (depth === 0) out += ch;
+  }
+  return out;
+}
+
 // Japanese has no spaces between words, so they are dropped; English (sep = ' ') keeps them.
 export function parseSegments(src: string, sep = ''): Cue[] {
   const data = JSON.parse(src) as { segments?: { start_ms: number; duration_ms: number; text: string }[] } | { start_ms: number; duration_ms: number; text: string }[];
   const segs = Array.isArray(data) ? data : data.segments ?? [];
   return segs
-    .map((g) => ({ start: g.start_ms / 1000, end: (g.start_ms + g.duration_ms) / 1000, text: g.text.replace(/\[[^\]]*\]/g, '').replace(/\s+/g, sep).trim() }))
+    .map((g) => ({ start: g.start_ms / 1000, end: (g.start_ms + g.duration_ms) / 1000, text: dropTags(g.text).split(/\s/).filter(Boolean).join(sep) }))
     .filter((c) => c.text);
 }
 

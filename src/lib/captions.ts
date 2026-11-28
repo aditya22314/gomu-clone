@@ -69,8 +69,14 @@ export function tokenize(text: string): ReelToken[] {
 const pick = (tracks: Track[], lang: string) =>
   tracks.find((t) => t.languageCode === lang && t.kind !== 'asr') ?? tracks.find((t) => t.languageCode === lang);
 
+// Only the query string of YouTube's track URL is used: the request always goes to YouTube's own
+// timed-text address, whatever the player response says.
+const TIMED_TEXT = 'https://www.youtube.com/api/timedtext?';
+
 async function download(track: Track): Promise<string> {
-  return fetch(track.baseUrl.replace('&fmt=srv3', '')).then((r) => r.text());
+  const params = new URL(track.baseUrl).searchParams;
+  params.delete('fmt');
+  return fetch(TIMED_TEXT + params.toString()).then((r) => r.text());
 }
 
 // Returns timed lines with English where YouTube has English captions, or [] when the video has no Japanese captions.

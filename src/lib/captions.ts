@@ -76,7 +76,8 @@ const TIMED_TEXT = 'https://www.youtube.com/api/timedtext?';
 async function download(track: Track): Promise<string> {
   const params = new URL(track.baseUrl).searchParams;
   params.delete('fmt');
-  return fetch(TIMED_TEXT + params.toString()).then((r) => r.text());
+  // The host is fixed above, so this can't be pointed at another server.
+  return fetch(TIMED_TEXT + params.toString()).then((r) => r.text()); // NOSONAR
 }
 
 // Returns timed lines with English where YouTube has English captions, or [] when the video has no Japanese captions.

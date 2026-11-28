@@ -32,7 +32,9 @@ npm run web           # or try it in a browser
 npm run check         # type-check, content check and logic tests
 ```
 
-Build installable apps with [EAS Build](https://docs.expo.dev/build/introduction/): `npx eas build -p android` or `-p ios`.
+Build installable apps with [EAS Build](https://docs.expo.dev/build/introduction/): `npx eas-cli@latest build -p android --profile preview`
+for an `.apk` to try, or `--profile production` for the Play Store bundle. See [store/listing.md](store/listing.md) for the
+Play Store listing, Data safety answers and release steps, and [docs/privacy-policy.md](docs/privacy-policy.md) for the privacy policy.
 
 ## Adding scenes
 
@@ -42,11 +44,17 @@ and give every token a dictionary entry. `npm run check` reports any word that i
 A clip can also carry an optional `youtube` field (video id, start and end, channel) for a future version that plays
 real clips through YouTube's official embedded player. Only add clips you have the right to use, and credit the channel.
 
+## Subtitles for clips
+
+The app doesn't ship caption text. While a clip plays, `src/lib/captions.ts` asks YouTube for that video's Japanese
+(and English, if any) captions, splits the lines into tappable words and caches them on the phone. Try it from a
+computer with `npx tsx scripts/try-captions.ts <videoId>`.
+
 ## Adding curated reels
 
 1. Download a video's Japanese captions as WebVTT (and English ones if available). Only use videos whose captions you may reuse, and keep the channel credit.
 2. List them in a JSON file: `[{ "videoId": "...", "title": "...", "channel": "...", "level": "N4", "subtitles": "ja.vtt", "translations": "en.vtt" }]`.
-3. Run `npx tsx scripts/import-subtitles.ts path/to/reels.json`. It splits every line into words with kuromoji and writes `src/data/reels.generated.ts`.
+3. Run `npx tsx scripts/import-subtitles.ts path/to/reels.json`. It splits every line into words with kuromoji and writes `src/data/reels.generated.json`.
 
 Words in reels that aren't in the built-in dictionary are looked up on Jisho.org when tapped, and saved with the card so reviews work offline.
 

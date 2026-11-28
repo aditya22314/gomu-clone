@@ -18,14 +18,29 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.mimi.japanese"
+      "package": "com.mimi.japanese",
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "scheme": "mimi",
     "plugins": [
-      "expo-notifications"
-    ]
+      "expo-notifications",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFF8F1"
+        }
+      ]
+    ],
+    "description": "Learn Japanese by listening: original scenes, tap-to-learn words, YouTube clips with Japanese subtitles, and spaced-repetition review."
   }
 }

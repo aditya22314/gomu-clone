@@ -22,6 +22,7 @@ import { Show, SHOWS, ShowWord, showById } from '../data/officialClips';
 import { parseYouTubeId, Reel, ReelLine, ReelToken, REELS } from '../data/reels';
 import { toRomaji } from '../lib/romaji';
 import { useStore } from '../lib/store';
+import { CaptionStatus, useCaptionLines } from '../lib/useCaptions';
 import { C, LEVEL_COLOR } from '../lib/theme';
 
 type Tapped = {
@@ -36,6 +37,13 @@ export function lineAt(lines: ReelLine[], now: number): number {
   for (let i = lines.length - 1; i >= 0; i--) if (lines[i].start <= now) return now < lines[i].end + 2 ? i : -1;
   return -1;
 }
+
+const CAPTION_HINT: Record<CaptionStatus, string> = {
+  loading: 'Loading subtitles…',
+  ready: 'Subtitles appear here as the video plays. Tap any word to look it up.',
+  none: 'This video has no Japanese subtitles to tap. Listen closely and look up what you hear.',
+  error: "Couldn't load subtitles right now. Japanese captions show in the player when YouTube has them.",
+};
 
 function lineText(l: ReelLine) {
   return l.tokens.map((t) => t.s).join('');
@@ -73,7 +81,7 @@ function ReelSubtitle({
           );
         })}
       </View>
-      {showRomaji && <Text style={styles.subRomaji}>{line.tokens.map((t) => toRomaji(t.r ?? t.s, t.p === 'particle' || t.p === '助詞')).join(' ')}</Text>}
+      {showRomaji && line.tokens.every((t) => t.r || !hasKanji(t.s)) && <Text style={styles.subRomaji}>{line.tokens.map((t) => toRomaji(t.r ?? t.s, t.p === 'particle' || t.p === '助詞')).join(' ')}</Text>}
       {line.en && <Text style={styles.subEn}>{line.en}</Text>}
     </View>
   );
@@ -159,6 +167,7 @@ function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; acti
   const [tapped, setTapped] = useState<Tapped | null>(null);
   const [failed, setFailed] = useState(false);
   const show = showById(reel.show);
+  const { lines, status } = useCaptionLines(reel.videoId, reel.lines, active);
   const openOnYouTube = () => {
     void Linking.openURL(`https://www.youtube.com/watch?v=${reel.videoId}`);
   };
@@ -169,16 +178,16 @@ function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; acti
 
   // follow the video with the subtitles
   useEffect(() => {
-    if (!active || !playing || !reel.lines?.length) return;
+    if (!active || !playing || !lines?.length) return;
     const t = setInterval(() => {
       void (async () => {
         const now = (await player.current?.getCurrentTime().catch(() => 0)) ?? 0;
-        const i = lineAt(reel.lines!, now);
+        const i = lineAt(lines, now);
         setLineIdx(i);
       })();
     }, 250);
     return () => clearInterval(t);
-  }, [active, playing, reel.lines]);
+  }, [active, playing, lines]);
 
   useEffect(() => {
     if (!active || !playing) return;
@@ -186,7 +195,7 @@ function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; acti
     return () => clearInterval(t);
   }, [active, playing]);
 
-  const line = reel.lines && lineIdx >= 0 ? reel.lines[lineIdx] : undefined;
+  const line = lines && lineIdx >= 0 ? lines[lineIdx] : undefined;
   const context = (l?: ReelLine) => ({ jp: l ? lineText(l) : reel.title, en: `From “${reel.title}” · ${reel.channel} on YouTube` });
 
   const playerView = () => {
@@ -264,7 +273,7 @@ function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; acti
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 12 }} keyboardShouldPersistTaps="handled">
-        {reel.lines?.length ? (
+        {lines?.length ? (
           line ? (
             <View style={styles.subBox}>
               <ReelSubtitle
@@ -279,9 +288,7 @@ function ReelCard({ reel, active, height, onRemove, onNext }: { reel: Reel; acti
             <Text style={styles.hint}>Subtitles appear here as the video plays. Tap any word to look it up.</Text>
           )
         ) : (
-          <Text style={styles.hint}>
-            {reel.jaCaptions === false ? 'Listen closely and look up what you hear.' : 'Japanese captions show in the player when YouTube has them.'}
-          </Text>
+          <Text style={styles.hint}>{CAPTION_HINT[status]}</Text>
         )}
         <ShowWords
           showId={reel.show}

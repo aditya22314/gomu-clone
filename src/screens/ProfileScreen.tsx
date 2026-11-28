@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pill, Stepper, Toggle } from '../components/Choice';
 import { LEVELS } from '../data/dictionary';
@@ -10,6 +10,8 @@ import { C, LEVEL_COLOR } from '../lib/theme';
 export function formatTime(h: number, m: number) {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
+
+const PRIVACY_URL = 'https://github.com/aditya22314/gomu-clone/blob/main/docs/privacy-policy.md';
 
 export default function ProfileScreen() {
   const { state, updateProfile, resetAll, exportData, importData } = useStore();
@@ -156,7 +158,15 @@ export default function ProfileScreen() {
           <Text style={styles.h3}>About Mimi</Text>
           <Text style={styles.sub}>
             Free, no ads, no account, no tracking. Everything you do stays on this device. Scenes are original dialogues voiced by
-            your phone's built-in Japanese voice. Dictionary links open Jisho.org.
+            your phone's built-in Japanese voice. Clips play in YouTube's own player, credited to their channels, and their
+            subtitles come from YouTube's captions. Word lookups use JMdict (EDRDG, CC BY-SA 4.0) via Jisho.org.
+          </Text>
+          <Text
+            style={[styles.sub, { color: C.accent, marginTop: 6 }]}
+            accessibilityRole="link"
+            onPress={() => Linking.openURL(PRIVACY_URL)}
+          >
+            Privacy policy
           </Text>
         </View>
 
